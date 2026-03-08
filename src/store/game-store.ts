@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Chess } from 'chess.js'
-import type { ClassifiedMove, GameResult, MoveRecord, Settings } from '../types/chess'
+import type { ClassifiedMove, CompletedGame, GameResult, MoveRecord, Settings } from '../types/chess'
 
 const STARTING_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
@@ -16,11 +16,15 @@ export interface GameStore {
   // Settings (persisted)
   settings: Settings
 
+  // Game history (persisted)
+  gameHistory: CompletedGame[]
+
   // UI state (NOT persisted)
   currentMoves: ClassifiedMove[] | null
   isEngineReady: boolean
   pendingPromotion: { from: string; to: string; options: ClassifiedMove[] } | null
   isMoving: boolean
+  showSettings: boolean
 
   // Actions
   playMove: (move: ClassifiedMove) => void
@@ -33,6 +37,7 @@ export interface GameStore {
   setEngineReady: (ready: boolean) => void
   setPendingPromotion: (promo: { from: string; to: string; options: ClassifiedMove[] } | null) => void
   setIsMoving: (moving: boolean) => void
+  setShowSettings: (show: boolean) => void
 }
 
 export const useGameStore = create<GameStore>()(
@@ -51,15 +56,20 @@ export const useGameStore = create<GameStore>()(
         theme: 'dark' as const,
       },
 
+      // Game history
+      gameHistory: [],
+
       // Initial UI state
       currentMoves: null,
       isEngineReady: false,
       pendingPromotion: null,
       isMoving: false,
+      showSettings: false,
 
       // Actions
       playMove: (move: ClassifiedMove) => {
         const state = get()
+        if (!state.currentMoves) return // No moves presented — should never happen
         const chess = new Chess(state.fen)
         const result = chess.move({
           from: move.from,
@@ -76,7 +86,7 @@ export const useGameStore = create<GameStore>()(
             san: result.san,
             promotion: move.promotion,
           },
-          options: state.currentMoves!,
+          options: state.currentMoves,
           classification: move.classification,
         }
 
@@ -118,25 +128,46 @@ export const useGameStore = create<GameStore>()(
       presentMoves: (moves) => set({ currentMoves: moves }),
 
       endGame: (result) =>
-        set({
-          gamePhase: 'ended',
-          result,
-          currentMoves: null,
+        set((state) => {
+          const entry: CompletedGame = {
+            date: new Date().toISOString(),
+            result,
+            moveCount: state.moveHistory.length,
+            playerColor: 'w',
+          }
+          return {
+            gamePhase: 'ended' as const,
+            result,
+            currentMoves: null,
+            gameHistory: [entry, ...state.gameHistory].slice(0, 100),
+          }
         }),
 
       resign: () =>
-        set({
-          gamePhase: 'ended',
-          result: { type: 'resignation', resignedBy: 'w' },
-          currentMoves: null,
+        set((state) => {
+          const result: GameResult = { type: 'resignation', resignedBy: 'w' }
+          const entry: CompletedGame = {
+            date: new Date().toISOString(),
+            result,
+            moveCount: state.moveHistory.length,
+            playerColor: 'w',
+          }
+          return {
+            gamePhase: 'ended' as const,
+            result,
+            currentMoves: null,
+            gameHistory: [entry, ...state.gameHistory].slice(0, 100),
+          }
         }),
 
       setEngineReady: (ready) => set({ isEngineReady: ready }),
       setPendingPromotion: (promo) => set({ pendingPromotion: promo }),
       setIsMoving: (moving) => set({ isMoving: moving }),
+      setShowSettings: (show) => set({ showSettings: show }),
     }),
     {
       name: 'ch3ss-game',
+      version: 1,
       partialize: (state) => ({
         fen: state.fen,
         moveHistory: state.moveHistory,
@@ -144,7 +175,13 @@ export const useGameStore = create<GameStore>()(
         result: state.result,
         playerColor: state.playerColor,
         settings: state.settings,
+        gameHistory: state.gameHistory,
       }),
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          console.error('Rehydration failed, starting fresh game')
+        }
+      },
     },
   ),
 )

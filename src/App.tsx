@@ -6,6 +6,7 @@ import { Board } from './components/Board/Board'
 import { MoveArrows } from './components/MoveArrows/MoveArrows'
 import { GameControls } from './components/GameControls/GameControls'
 import { EndGame } from './components/EndGame/EndGame'
+import { Settings } from './components/Settings/Settings'
 import { useStockfish } from './hooks/useStockfish'
 import { useGameStore } from './store/game-store'
 import type { ClassifiedMove } from './types/chess'
@@ -50,18 +51,27 @@ function GameApp() {
   const playMove = useGameStore((state) => state.playMove)
   const pendingPromotion = useGameStore((state) => state.pendingPromotion)
   const setPendingPromotion = useGameStore((state) => state.setPendingPromotion)
+  const theme = useGameStore((state) => state.settings.theme)
   const hasInitializedRef = useRef(false)
 
-  // On engine ready + game playing, generate initial moves
+  // Apply theme class on document element
+  useEffect(() => {
+    document.documentElement.classList.toggle('light', theme === 'light')
+  }, [theme])
+
+  // On engine ready + game playing, generate initial moves or trigger AI
   useEffect(() => {
     if (isReady && gamePhase === 'playing' && !currentMoves && !hasInitializedRef.current) {
       hasInitializedRef.current = true
-      // Check if it's player's turn (white)
       if (fen.includes(' w ')) {
+        // Player's turn — generate move options
         generateMoves(fen)
+      } else if (fen.includes(' b ')) {
+        // AI's turn (restored mid-game) — trigger AI response
+        handlePlayerMoveComplete()
       }
     }
-  }, [isReady, gamePhase, currentMoves, fen, generateMoves])
+  }, [isReady, gamePhase, currentMoves, fen, generateMoves, handlePlayerMoveComplete])
 
   // Reset init flag on new game
   useEffect(() => {
@@ -137,6 +147,7 @@ function GameApp() {
         <GameControls />
       </main>
       <EndGame />
+      <Settings />
     </div>
   )
 }

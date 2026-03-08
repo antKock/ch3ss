@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useGameStore } from './game-store'
 import type { ClassifiedMove } from '../types/chess'
 
@@ -16,7 +16,9 @@ describe('game-store', () => {
       isEngineReady: false,
       pendingPromotion: null,
       isMoving: false,
+      showSettings: false,
       settings: { opponentElo: 1000, theme: 'dark' },
+      gameHistory: [],
     })
   })
 
@@ -134,6 +136,163 @@ describe('game-store', () => {
       useGameStore.getState().presentMoves(moves)
 
       expect(useGameStore.getState().currentMoves).toEqual(moves)
+    })
+  })
+
+  describe('gameHistory', () => {
+    it('endGame adds entry to gameHistory', () => {
+      useGameStore.setState({
+        moveHistory: [
+          { fen: '', played: { from: 'e2', to: 'e4', san: 'e4' }, options: [], classification: 'top' },
+          { fen: '', played: { from: 'd2', to: 'd4', san: 'd4' }, options: [], classification: 'correct' },
+        ],
+      })
+
+      useGameStore.getState().endGame({ type: 'checkmate', winner: 'w' })
+
+      const state = useGameStore.getState()
+      expect(state.gameHistory).toHaveLength(1)
+      expect(state.gameHistory[0].result).toEqual({ type: 'checkmate', winner: 'w' })
+      expect(state.gameHistory[0].moveCount).toBe(2)
+      expect(state.gameHistory[0].playerColor).toBe('w')
+      expect(state.gameHistory[0].date).toBeDefined()
+    })
+
+    it('gameHistory is prepended (newest first)', () => {
+      useGameStore.getState().endGame({ type: 'checkmate', winner: 'w' })
+      useGameStore.setState({ gamePhase: 'playing', result: undefined })
+      useGameStore.getState().endGame({ type: 'stalemate' })
+
+      const state = useGameStore.getState()
+      expect(state.gameHistory).toHaveLength(2)
+      expect(state.gameHistory[0].result).toEqual({ type: 'stalemate' })
+      expect(state.gameHistory[1].result).toEqual({ type: 'checkmate', winner: 'w' })
+    })
+
+    it('FIFO pruning at 101 entries removes oldest', () => {
+      // Fill with 100 entries
+      const existing = Array.from({ length: 100 }, (_, i) => ({
+        date: new Date(2026, 0, i + 1).toISOString(),
+        result: { type: 'checkmate' as const, winner: 'w' as const },
+        moveCount: 10,
+        playerColor: 'w' as const,
+      }))
+      useGameStore.setState({ gameHistory: existing })
+
+      // Add one more
+      useGameStore.getState().endGame({ type: 'stalemate' })
+
+      const state = useGameStore.getState()
+      expect(state.gameHistory).toHaveLength(100)
+      expect(state.gameHistory[0].result).toEqual({ type: 'stalemate' })
+    })
+
+    it('game history persists via Zustand persist', () => {
+      useGameStore.getState().endGame({ type: 'checkmate', winner: 'w' })
+
+      const stored = JSON.parse(localStorage.getItem('ch3ss-game') || '{}')
+      expect(stored.state.gameHistory).toHaveLength(1)
+    })
+
+    it('resign adds exactly one history entry', () => {
+      useGameStore.getState().resign()
+
+      const state = useGameStore.getState()
+      expect(state.gameHistory).toHaveLength(1)
+      expect(state.gameHistory[0].result).toEqual({ type: 'resignation', resignedBy: 'w' })
+    })
+  })
+
+  describe('persist middleware', () => {
+    it('persists game state to localStorage after playMove', () => {
+      const move: ClassifiedMove = {
+        from: 'e2',
+        to: 'e4',
+        san: 'e4',
+        classification: 'top',
+        evalLoss: 0,
+      }
+      useGameStore.setState({ currentMoves: [move] })
+      useGameStore.getState().playMove(move)
+
+      const stored = JSON.parse(localStorage.getItem('ch3ss-game') || '{}')
+      expect(stored.state.fen).toContain('4P3')
+      expect(stored.state.moveHistory).toHaveLength(1)
+    })
+
+    it('persists game state to localStorage after startNewGame', () => {
+      useGameStore.setState({ gamePhase: 'ended', result: { type: 'checkmate', winner: 'w' } })
+      useGameStore.getState().startNewGame()
+
+      const stored = JSON.parse(localStorage.getItem('ch3ss-game') || '{}')
+      expect(stored.state.fen).toBe(STARTING_FEN)
+      expect(stored.state.gamePhase).toBe('playing')
+    })
+
+    it('restores FEN, moveHistory, gamePhase from localStorage', () => {
+      const savedState = {
+        state: {
+          fen: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
+          moveHistory: [{ fen: STARTING_FEN, played: { from: 'e2', to: 'e4', san: 'e4' }, options: [], classification: 'top' }],
+          gamePhase: 'playing',
+          result: undefined,
+          playerColor: 'w',
+          settings: { opponentElo: 1000, theme: 'dark' },
+        },
+        version: 1,
+      }
+      localStorage.setItem('ch3ss-game', JSON.stringify(savedState))
+
+      // Trigger rehydration
+      useGameStore.persist.rehydrate()
+
+      const state = useGameStore.getState()
+      expect(state.fen).toContain('4P3')
+      expect(state.moveHistory).toHaveLength(1)
+      expect(state.gamePhase).toBe('playing')
+    })
+
+    it('recovers from corrupted localStorage by using initial state', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      localStorage.setItem('ch3ss-game', '{invalid json!!!')
+
+      useGameStore.persist.rehydrate()
+
+      // Store should still be functional with initial state
+      const state = useGameStore.getState()
+      expect(state.gamePhase).toBeDefined()
+      consoleSpy.mockRestore()
+    })
+
+    it('starts fresh game when localStorage key is missing', () => {
+      localStorage.removeItem('ch3ss-game')
+
+      useGameStore.persist.rehydrate()
+
+      const state = useGameStore.getState()
+      expect(state.fen).toBe(STARTING_FEN)
+      expect(state.gamePhase).toBe('playing')
+    })
+
+    it('persists settings across sessions', () => {
+      useGameStore.getState().updateSettings({ opponentElo: 1400, theme: 'light' })
+
+      const stored = JSON.parse(localStorage.getItem('ch3ss-game') || '{}')
+      expect(stored.state.settings.opponentElo).toBe(1400)
+      expect(stored.state.settings.theme).toBe('light')
+    })
+
+    it('does not persist transient UI state', () => {
+      useGameStore.setState({
+        currentMoves: [{ from: 'e2', to: 'e4', san: 'e4', classification: 'top', evalLoss: 0 }],
+        isEngineReady: true,
+        isMoving: true,
+      })
+
+      const stored = JSON.parse(localStorage.getItem('ch3ss-game') || '{}')
+      expect(stored.state.currentMoves).toBeUndefined()
+      expect(stored.state.isEngineReady).toBeUndefined()
+      expect(stored.state.isMoving).toBeUndefined()
     })
   })
 })

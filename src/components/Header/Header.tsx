@@ -1,10 +1,15 @@
+import { useGameStore } from '../../store/game-store'
+
 export function Header() {
+  const setShowSettings = useGameStore((state) => state.setShowSettings)
+
   return (
     <header className="w-full max-w-md mx-auto flex items-center justify-between px-4 py-3">
       <h1 className="text-2xl font-bold tracking-tight">ch3ss</h1>
       <button
         className="p-2 rounded-lg hover:bg-white/10 transition-colors"
         aria-label="Settings"
+        onClick={() => setShowSettings(true)}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

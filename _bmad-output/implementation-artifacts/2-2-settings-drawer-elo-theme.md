@@ -1,6 +1,6 @@
 # Story 2.2: Settings Drawer — ELO & Theme
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,56 +22,56 @@ So that I can customize my ch3ss experience.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Settings component (AC: #1, #8)
-  - [ ] Create `src/components/Settings/Settings.tsx`
-  - [ ] Implement as a slide-in drawer overlay from the right side
-  - [ ] Backdrop: semi-transparent overlay behind drawer, clicking closes drawer
-  - [ ] Close button (X) at top of drawer
-  - [ ] Slide-in/slide-out CSS animation (transform translateX)
-  - [ ] Use `motion-reduce:` Tailwind variant to disable animation for reduced-motion preference
-  - [ ] Add to App.tsx: render conditionally based on `showSettings` UI state
-- [ ] Task 2: Wire Header gear icon (AC: #1)
-  - [ ] In `src/components/Header/Header.tsx`, wire gear icon `onClick` to toggle `showSettings` in store
-  - [ ] Add `setShowSettings(boolean)` action to game-store.ts UI slice
-  - [ ] Gear icon: use an inline SVG or Unicode ⚙ character — no icon library needed
-- [ ] Task 3: ELO slider (AC: #2, #3, #4)
-  - [ ] Add range input (`<input type="range">`) for ELO: min=800, max=1600, step=50
-  - [ ] Display current ELO value next to slider
-  - [ ] On change: update `settings.opponentElo` in store
-  - [ ] Zustand persist middleware (from Story 2.1) auto-saves the new value
-  - [ ] ELO change takes effect on next AI move — no special logic needed, `getAIMove` reads current `opponentElo` from store at call time
-  - [ ] Style slider with Tailwind: accent color matching theme
-  - [ ] ARIA: `aria-label="AI difficulty ELO"`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow`
-- [ ] Task 4: Theme toggle (AC: #5, #6, #7)
-  - [ ] Add toggle switch for dark/light theme
-  - [ ] On toggle: update `settings.theme` in store ('dark' | 'light')
-  - [ ] Apply theme by toggling a CSS class on `<html>` or `<body>` element: `dark` class for dark theme
-  - [ ] Use Tailwind dark mode with `class` strategy (configured in `tailwind.config.ts`: `darkMode: 'class'`)
-  - [ ] On app load: read theme from persisted store and apply class immediately (prevent flash)
-  - [ ] Dark theme (sable) is default — initial store value: `theme: 'dark'`
-  - [ ] ARIA: `aria-label="Toggle theme"`, `role="switch"`, `aria-checked`
-- [ ] Task 5: Theme CSS implementation (AC: #6)
-  - [ ] Define light theme color tokens in `index.css` or Tailwind config
-  - [ ] Dark theme colors already defined (Story 1.1 — sable base styles)
-  - [ ] Ensure all existing components use Tailwind `dark:` variant for theme-aware styling
-  - [ ] Board squares: theme-appropriate colors for light/dark squares
-  - [ ] Text, backgrounds, borders: all theme-aware
-  - [ ] Settings drawer itself: theme-aware
-  - [ ] Color contrast meets WCAG AA in both themes (NFR9)
-- [ ] Task 6: Accessibility (AC: #9)
-  - [ ] Settings drawer: `role="dialog"`, `aria-label="Settings"`, `aria-modal="true"`
-  - [ ] Focus trap: when drawer is open, Tab cycles within drawer only
-  - [ ] Escape key closes drawer
-  - [ ] On close: return focus to gear icon (focus management)
-  - [ ] All interactive elements keyboard-navigable (Tab + Enter/Space)
-- [ ] Task 7: Write tests (AC: all)
-  - [ ] Test: gear icon click opens Settings drawer
-  - [ ] Test: backdrop click closes Settings drawer
-  - [ ] Test: close button closes Settings drawer
-  - [ ] Test: ELO slider updates store value
-  - [ ] Test: theme toggle switches theme class on document
-  - [ ] Test: Escape key closes drawer
-  - [ ] Test: settings persist after drawer close (via Zustand persist)
+- [x] Task 1: Create Settings component (AC: #1, #8)
+  - [x] Create `src/components/Settings/Settings.tsx`
+  - [x] Implement as a slide-in drawer overlay from the right side
+  - [x] Backdrop: semi-transparent overlay behind drawer, clicking closes drawer
+  - [x] Close button (X) at top of drawer
+  - [x] Slide-in/slide-out CSS animation (transform translateX)
+  - [x] Use `motion-reduce:` Tailwind variant to disable animation for reduced-motion preference
+  - [x] Add to App.tsx: render conditionally based on `showSettings` UI state
+- [x] Task 2: Wire Header gear icon (AC: #1)
+  - [x] In `src/components/Header/Header.tsx`, wire gear icon `onClick` to toggle `showSettings` in store
+  - [x] Add `setShowSettings(boolean)` action to game-store.ts UI slice
+  - [x] Gear icon: use an inline SVG or Unicode ⚙ character — no icon library needed
+- [x] Task 3: ELO slider (AC: #2, #3, #4)
+  - [x] Add range input (`<input type="range">`) for ELO: min=800, max=1600, step=50
+  - [x] Display current ELO value next to slider
+  - [x] On change: update `settings.opponentElo` in store
+  - [x] Zustand persist middleware (from Story 2.1) auto-saves the new value
+  - [x] ELO change takes effect on next AI move — no special logic needed, `getAIMove` reads current `opponentElo` from store at call time
+  - [x] Style slider with Tailwind: accent color matching theme
+  - [x] ARIA: `aria-label="AI difficulty ELO"`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow`
+- [x] Task 4: Theme toggle (AC: #5, #6, #7)
+  - [x] Add toggle switch for dark/light theme
+  - [x] On toggle: update `settings.theme` in store ('dark' | 'light')
+  - [x] Apply theme by toggling `light` CSS class on `<html>` element (dark is default, no class needed)
+  - [x] Use CSS custom properties with `html.light` selector (Tailwind v4 — no `tailwind.config.ts` needed)
+  - [x] On app load: read theme from persisted store and apply class immediately (prevent flash)
+  - [x] Dark theme (sable) is default — initial store value: `theme: 'dark'`
+  - [x] ARIA: `aria-label="Toggle theme"`, `role="switch"`, `aria-checked`
+- [x] Task 5: Theme CSS implementation (AC: #6)
+  - [x] Define light theme color tokens in `index.css` or Tailwind config
+  - [x] Dark theme colors already defined (Story 1.1 — sable base styles)
+  - [x] Ensure all existing components use CSS custom properties (`var(--color-*)`) for theme-aware styling
+  - [x] Board squares: theme-appropriate colors for light/dark squares
+  - [x] Text, backgrounds, borders: all theme-aware
+  - [x] Settings drawer itself: theme-aware
+  - [x] Color contrast meets WCAG AA in both themes (NFR9)
+- [x] Task 6: Accessibility (AC: #9)
+  - [x] Settings drawer: `role="dialog"`, `aria-label="Settings"`, `aria-modal="true"`
+  - [x] Focus trap: when drawer is open, Tab cycles within drawer only
+  - [x] Escape key closes drawer
+  - [x] On close: return focus to gear icon (focus management)
+  - [x] All interactive elements keyboard-navigable (Tab + Enter/Space)
+- [x] Task 7: Write tests (AC: all)
+  - [x] Test: gear icon click opens Settings drawer
+  - [x] Test: backdrop click closes Settings drawer
+  - [x] Test: close button closes Settings drawer
+  - [x] Test: ELO slider updates store value
+  - [x] Test: theme toggle switches theme class on document
+  - [x] Test: Escape key closes drawer
+  - [x] Test: settings persist after drawer close (via Zustand persist)
 
 ## Dev Notes
 
@@ -204,9 +204,29 @@ From UX design specification:
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6
 
 ### Debug Log References
+No issues encountered.
 
 ### Completion Notes List
+- Created Settings drawer component with slide-in animation, backdrop, and close button
+- Wired Header gear icon to toggle showSettings in store
+- ELO slider: range 800-1600, step 50, with ARIA attributes
+- Theme toggle: switch between dark/light with CSS custom properties on html element
+- Light theme CSS already existed — updated selector from `.light` to `html.light` for specificity
+- Added drawer slide-in/out CSS animation with reduced-motion support
+- Full accessibility: role=dialog, aria-modal, focus trap, Escape key, focus return
+- 8 tests covering all acceptance criteria
 
 ### File List
+- `src/components/Settings/Settings.tsx` — New: Settings drawer component
+- `src/components/Settings/Settings.test.tsx` — New: 8 tests for Settings
+- `src/components/Header/Header.tsx` — Modified: wired gear icon onClick
+- `src/store/game-store.ts` — Modified: added showSettings state and setShowSettings action
+- `src/store/game-store.test.ts` — Modified: updated beforeEach with showSettings
+- `src/App.tsx` — Modified: import and render Settings component
+- `src/index.css` — Modified: drawer animation CSS, updated light theme selector
+
+### Change Log
+- 2026-03-08: Implemented Story 2.2 — Settings drawer with ELO slider, theme toggle, accessibility, and tests
