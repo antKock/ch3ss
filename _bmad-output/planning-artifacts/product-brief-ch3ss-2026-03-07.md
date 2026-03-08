@@ -35,13 +35,13 @@ Ces joueurs finissent par éviter les parties classiques sur mobile, ou jouent e
 
 ### Proposed Solution
 
-Ch3ss propose une mécanique unique : à chaque tour, le joueur choisit parmi 3 coups générés par une IA à des niveaux ELO différents (inférieur, égal, supérieur au sien). Les 3 coups sont toujours plausibles — jamais de choix caricaturalement mauvais. Cette contrainte transforme l'expérience : au lieu de chercher le meilleur coup parmi des dizaines de possibilités, le joueur évalue 3 options crédibles. Le plaisir tactique est préservé, la charge mentale est divisée.
+Ch3ss propose une mécanique unique : à chaque tour, le joueur choisit parmi 3 coups classés par qualité d'évaluation Stockfish — le meilleur coup trouvé (Top), un coup qui stabilise la position (Correct), et un coup qui dégrade légèrement la position (Bof). Les 3 coups sont toujours plausibles — jamais de choix caricaturalement mauvais. Cette contrainte transforme l'expérience : au lieu de chercher le meilleur coup parmi des dizaines de possibilités, le joueur évalue 3 options crédibles. Le plaisir tactique est préservé, la charge mentale est divisée. Surtout, le joueur construit sa victoire ou sa défaite coup par coup — choisir systématiquement le Top garantit un avantage décisif.
 
 ### Key Differentiators
 
 - **Ratio plaisir/effort le plus bas de l'univers échecs** : la saveur d'une partie avec une fraction de l'effort mental
 - **Zéro anxiété de performance** : le format invite au jeu détendu, pas à la compétition stressante
-- **Effet secondaire d'apprentissage** : exposition à des coups au-dessus de son niveau habituel, sans pression pédagogique
+- **Effet secondaire d'apprentissage** : exposition au meilleur coup Stockfish à chaque tour, le joueur apprend par osmose sans pression pédagogique
 - **Format mobile natif** : pensé pour le métro, la salle d'attente, la pause — pas pour la session studieuse
 
 ---
@@ -116,23 +116,23 @@ N/A au MVP — pas de rôles secondaires identifiés.
 ### Core Features
 
 1. **Échiquier jouable** — règles d'échecs 100% standard, interface épurée mobile-first
-2. **Mécanique des 3 coups** — à chaque tour du joueur, 3 coups générés par IA à 3 niveaux ELO (ELO-X, ELO, ELO+X) avec X = ±300 (ajustable). Les 3 coups sont présentés de manière **neutre, sans indication de qualité** — le joueur choisit à l'instinct
-3. **IA adversaire** — joue librement à ELO fixe (valeur par défaut), avec un délai de ~1s pour un rythme naturel
+2. **Mécanique des 3 coups** — à chaque tour du joueur, Stockfish analyse la position et propose 3 coups classés par qualité d'évaluation : **Top** (meilleur coup), **Correct** (stabilise la position), **Bof** (dégrade la position). Les 3 coups sont présentés de manière **neutre, sans indication de qualité** — le joueur choisit à l'instinct
+3. **IA adversaire** — joue librement à ELO configurable (sélecteur dans les réglages), avec un délai de ~1s pour un rythme naturel
 4. **Moteur d'échecs local** — exécution côté client, offline, zéro dépendance serveur pour le gameplay
-5. **Fin de partie** — mat, nulle naturelle, ou abandon volontaire du joueur
-6. **Sauvegarde locale** — la partie en cours est sauvegardée (localStorage) si le joueur ferme l'app
+5. **Fin de partie** — mat, pat (égalité), ou abandon volontaire du joueur (défaite directe)
+6. **Sauvegarde locale** — la partie en cours est sauvegardée (localStorage) si le joueur ferme l'app. Réouverture = retour direct au plateau
 7. **Relance rapide** — après une partie, relancer immédiatement sans friction
+8. **Réglages** — sélecteur ELO adversaire (800-1600), historique des parties, toggle light/dark
 
 ### Out of Scope for MVP
 
 - Compte utilisateur / authentification
-- Suivi d'ELO ou historique de parties
 - Fonctionnalité "invite un ami" / partage
 - Multijoueur
 - Monétisation (dons, cosmétiques)
-- Choix de l'ELO de départ
 - Indication post-coup de la qualité du choix
 - Timer / limite de coups
+- ELO joueur qui évolue au fil des parties
 
 ### MVP Success Criteria
 
@@ -144,7 +144,6 @@ N/A au MVP — pas de rôles secondaires identifiés.
 ### Future Vision
 
 **V2 :**
-- Choix de l'ELO (joueur et adversaire IA)
 - ELO joueur qui évolue au fil des parties
 - Fonctionnalité "invite un ami" + partage in-app
 - Monétisation légère (dons, cosmétiques)
@@ -156,5 +155,4 @@ N/A au MVP — pas de rôles secondaires identifiés.
 
 - **Stack front** : à déterminer selon les contraintes — publication stores mobiles + jouable en navigateur (mobile/tablette/desktop)
 - **Moteur IA** : Stockfish.js ou alternative, exécution locale obligatoire
-- **Valeur de X** : ±300 comme point de départ, à ajuster par playtesting
-- **Affichage des 3 coups** : design UX à définir — neutre, clair, pas brouillon
+- **Sélection des 3 coups** : approche multi-PV + eval-loss buckets. Stockfish analyse à depth configurable, retourne les N meilleures variantes triées par eval. Top = eval-loss 0 à T1, Correct = T1 à T2, Bof = > T2. Seuils T1/T2 (en centipawns) et depth ajustables via réglages dev (défauts : T1=30cp, T2=100cp, depth=12)

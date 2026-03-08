@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 inputDocuments:
   - _bmad-output/planning-artifacts/product-brief-ch3ss-2026-03-07.md
 ---
@@ -17,7 +17,7 @@ inputDocuments:
 
 ### Project Vision
 
-Ch3ss est un jeu d'échecs mobile-first où le joueur choisit parmi 3 coups générés par IA à chaque tour, au lieu de jouer librement. En réduisant le champ décisionnel à 3 options de qualité variable (ELO-300, ELO, ELO+300) mais toujours plausibles, ch3ss offre le plaisir tactique des échecs sans la surcharge cognitive — le format idéal pour des micro-sessions détendues sur mobile (2-3 min par partie).
+Ch3ss est un jeu d'échecs mobile-first où le joueur choisit parmi 3 coups à chaque tour, au lieu de jouer librement. Stockfish analyse la position et propose 3 coups classés par qualité d'évaluation : Top (meilleur coup), Correct (stabilise), Bof (dégrade la position). Le joueur choisit à l'instinct sans connaître la qualité — le plaisir tactique des échecs sans la surcharge cognitive, le format idéal pour des micro-sessions détendues sur mobile (2-3 min par partie).
 
 ### Target Users
 
@@ -104,7 +104,7 @@ Ce geste "voir 3 options → choisir → voir la réponse" est le produit entier
 | **Coup décisif (mat, grosse prise)** | Micro-satisfaction — un petit "nice" intérieur, pas une explosion de joie |
 | **Défaite** | "Ah dommage" léger → envie immédiate de relancer — jamais de frustration |
 | **Victoire** | Satisfaction douce + curiosité pour le récap |
-| **Récap fin de partie** | Moment de fierté — distribution des choix (ELO-, ELO, ELO+) révèle la "qualité" de la partie. Motivant sans être punitif |
+| **Récap fin de partie** | Moment de fierté — distribution des choix (Top/Correct/Bof) révèle la "qualité" de la partie. Motivant sans être punitif |
 | **Relance** | Zéro hésitation — le geste est naturel, presque réflexe |
 
 ### Micro-Emotions
@@ -125,7 +125,7 @@ Ce geste "voir 3 options → choisir → voir la réponse" est le produit entier
 - **Flow léger** → Transitions instantanées entre les états, aucune interruption modale
 - **Absence de pression** → Pas de timer visible, pas de compteur de coups, pas de score en cours de partie
 - **"Ah dommage" pas frustrant** → Écran de défaite minimal, bouton "Rejouer" proéminent, ton neutre
-- **Fierté au récap** → Écran de fin avec distribution visuelle des choix (ex: barre ou camembert ELO-/ELO/ELO+). Présenté comme info intéressante, pas comme jugement
+- **Fierté au récap** → Écran de fin avec distribution visuelle des choix (barres Top/Correct/Bof). Présenté comme info intéressante, pas comme jugement
 
 ### Emotional Design Principles
 
@@ -155,7 +155,7 @@ Ce geste "voir 3 options → choisir → voir la réponse" est le produit entier
 **De Wordle :**
 - **Un seul écran = le jeu** — Pas de navigation, pas de menus imbriqués. L'app s'ouvre, le jeu est là
 - **Feedback coloré immédiat** — Les couleurs communiquent sans mots. Pour ch3ss : les cercles colorés des 3 coups suivent cette logique
-- **Récap partageable** — Le récap fin de partie (distribution ELO-/ELO/ELO+) pourrait devenir un "résultat partageable" en V2, comme les carrés Wordle
+- **Récap partageable** — Le récap fin de partie (distribution Top/Correct/Bof) pourrait devenir un "résultat partageable" en V2, comme les carrés Wordle
 
 **De 2048 :**
 - **Boucle geste-résultat ultra-courte** — Minimiser le temps entre la décision et le feedback visuel. Pour ch3ss : tap → pièce bouge immédiatement
@@ -237,9 +237,9 @@ Le joueur arrive avec un modèle mental d'échecs classique ("je réfléchis, je
 - Les couleurs sont décoratives, pas hiérarchiques
 
 **Ce que le joueur n'a PAS besoin de savoir :**
-- Que les 3 coups correspondent à des niveaux ELO différents
+- Que les 3 coups sont classés par qualité d'évaluation Stockfish
 - Quel coup est "le meilleur"
-- Comment l'IA génère les options
+- Comment Stockfish sélectionne les options
 
 ### Success Criteria
 
@@ -285,7 +285,7 @@ Le pattern nouveau (3 cercles) est suffisamment proche d'un pattern familier (ta
 
 **5. Completion (fin de partie) :**
 - Mat, pat, ou abandon → transition douce vers l'écran de récap
-- Récap : résultat (victoire/défaite/nulle) + distribution des choix ELO-/ELO/ELO+
+- Récap : résultat (victoire/défaite/égalité) + distribution des choix Top/Correct/Bof
 - Bouton "Rejouer" proéminent → nouvelle partie instantanée
 
 ## Visual Design Foundation
@@ -413,7 +413,8 @@ Exploration visuelle interactive via deux mockups HTML dédiés :
 | `accent` | `#6A8060` | `#6A8060` |
 
 - **Dark mode par défaut** — choix différenciant vis-à-vis des apps d'échecs classiques ; le thème Forêt (vert sombre teinté) apporte du cachet et repose les yeux
-- **Toggle light/dark** toujours accessible en haut à droite de l'écran (icône lune en light, soleil en dark, opacité 50%)
+- **Toggle light/dark** dans l'écran Réglages (toggle segmenté Clair/Sombre)
+- **Icône engrenage** en haut à droite (opacité 50%) sur l'écran d'accueil et l'écran de récap. **Pas d'icône pendant la partie** — aucune distraction
 - Le choix du thème est persisté en local storage
 
 #### Branding
@@ -445,7 +446,9 @@ Exploration visuelle interactive via deux mockups HTML dédiés :
    - Stroke=22, HEAD_HALF_W=28, HEAD_LEN=38
    - Rôle : illustration "logo" — communique visuellement la mécanique du jeu
 3. **Bouton "Jouer"** — Accent bg, texte blanc, 16px SemiBold, border-radius 14px, padding 14×56px, box-shadow
-4. **Compteur de parties** — "12 parties jouées" en 11px textSec (stocké en local storage, pas de compte utilisateur)
+4. **Compteur de parties** — en 11px textSec (stocké en local storage, pas de compte utilisateur)
+   - Si ≥ 1 partie : "{n} parties jouées"
+   - Si 0 partie : "Première partie !" (plus engageant que "0 parties jouées")
 
 **Interactions :**
 - Tap "Jouer" → lance une nouvelle partie
@@ -459,23 +462,27 @@ Exploration visuelle interactive via deux mockups HTML dédiés :
 
 **Éléments (de haut en bas) :**
 
-1. **Header app** — Logo `ch3ss` (20px) centré + toggle light/dark en haut à droite
+1. **Header app** — Logo `ch3ss` (20px) centré, sans icône (pas de distraction pendant la partie)
 2. **Spacer** (flex:1) — pousse le board au centre
-3. **Pièces capturées adversaire** — rangée horizontale, alignée à gauche, pièces 18px, opacité 0.7
+3. **Pièces capturées adversaire** — rangée horizontale, alignée à gauche, pièces 22px, opacité 0.85, triées par valeur décroissante (D > T > F > C > P)
 4. **Plateau 8×8** — Thème Menthe (claires `#E8F0E8`, sombres `#B8D0B4`), pièces Staunty 88%, border-radius 10px
 5. **Flèches SVG** — overlay absolu sur le board (viewBox 800×800), 3 flèches en couleurs Ocean
    - Stroke=22, HEAD_HALF_W=28, HEAD_LEN=40
-   - Cases source et destination teintées (mélange opaque 45% avec la couleur de la flèche)
+   - Cases source et destination teintées (mélange opaque 45% avec la couleur de la flèche). Si deux flèches partagent une case, les teintes sont mélangées (pas d'écrasement)
    - Tracé en L pour les coups de cavalier (Bézier Q, rayon R=28)
    - Têtes de flèche : triangle arrondi (r=0.22)
-6. **Pièces capturées joueur** — rangée horizontale, alignée à gauche
+6. **Pièces capturées joueur** — rangée horizontale, alignée à gauche, mêmes dimensions (22px, opacité 0.85, tri par valeur)
 7. **Spacer** (flex:1)
 8. **Bouton "Abandonner"** — pinné en bas, 11px textSec, opacité 0.5, pas de bordure ni fond
 
 **Interactions :**
 - Tap sur une flèche ou case teintée → joue le coup (transition vers l'état "après un coup")
 - Tap "Abandonner" → fin de partie (défaite)
-- Tap toggle → switch light/dark
+
+**Variantes moquées :**
+
+- **Ouverture (premier coup)** — Position initiale complète avec 3 flèches d'ouverture (e4, d4, Nc3). Vérifie la lisibilité des flèches sur un plateau plein de pièces
+- **Joueur Noir (board retourné)** — Le plateau est retourné (rang 1 en haut, rang 8 en bas). Les pièces noires du joueur sont en bas, les pièces blanches adverses en haut. Les pièces capturées s'inversent aussi (adversaire en haut, joueur en bas)
 
 ---
 
@@ -499,6 +506,7 @@ Exploration visuelle interactive via deux mockups HTML dédiés :
 **Comportement :**
 - Le toast reste visible ~1.2 secondes (durée de l'anneau de cooldown)
 - Tap "Annuler" pendant ce temps → annule le coup, les 3 mêmes flèches réapparaissent pour rechoisir
+- **Race condition** : si le joueur tape "Annuler" au moment exact de l'expiration du cooldown, "Annuler" gagne toujours — le joueur a la priorité
 - Si pas d'annulation → le toast disparaît, la pièce adverse glisse immédiatement (pas de pause supplémentaire — le cooldown du toast fait office de temps de réflexion IA perçu)
 
 ---
@@ -516,39 +524,88 @@ Exploration visuelle interactive via deux mockups HTML dédiés :
 
 ---
 
-### Écran de fin de partie
+### Écran de fin de partie (Récap)
 
 **Layout** : colonne centrée, padding-top 40px, gap 20px.
+
+**3 résultats possibles** : Victoire, Défaite, Égalité (pat).
 
 **Éléments (de haut en bas) :**
 
 1. **Résultat**
-   - Emoji : ♔ (victoire) / ♚ (défaite), 48px
-   - Titre : "Victoire" / "Défaite", 26px ExtraBold
-   - Sous-titre : "Échec et mat en 34 coups" / "Mat en 28 coups", 13px textSec
+   - Icône : SVG du roi de la couleur du joueur (`wK.svg` ou `bK.svg`)
+     - Victoire : roi debout (56×56px)
+     - Défaite : roi couché sur le côté (`transform: rotate(90deg)`, 56×56px)
+     - Égalité : les deux rois (blanc + noir) côte à côte, debout (48×48px chacun, gap 4px)
+   - Titre : "Victoire" / "Défaite" / "Égalité", 26px ExtraBold
+   - Sous-titre : "{nb coups} coups · {durée}", 13px textSec (ex: "34 coups · 2:47")
 
 2. **Card "Tes choix"** — récap de la distribution des choix du joueur
    - Background surface, border-radius 18px, padding 20px
    - Titre section : "TES CHOIX" en 12px uppercase textSec
    - 3 barres de progression avec :
-     - Pastille couleur (10px) + label + description + pourcentage
-     - Barre track (6px, border-radius 3px) avec fill coloré
-   - Labels : "Brillant" (meilleur coup), "Solide" (bon coup), "Prudent" (coup sûr)
-   - Couleurs : les 3 couleurs Ocean (bleu, ambre, violet)
-   - Note : les labels ne révèlent pas les niveaux ELO — formulation neutre et positive
+     - Label (13px bold) + pourcentage (14px ExtraBold) en couleur accent
+     - Barre track (6px, border-radius 3px) avec fill en couleur accent (opacity 0.7)
+   - Labels : **"Top"** / **"Correct"** / **"Bof"** — ton décontracté, pas de jugement absolu
+   - Couleur unique : `accent` (`#6A8060`) pour les 3 barres — neutre, pas de lien avec les couleurs des flèches
 
-3. **Statistiques** — 3 cards en row
-   - "Coups" (nombre total), "Durée" (temps de la partie), "Série" (parties consécutives)
-   - Background surface, border-radius 14px, padding 14px, text-align center
-   - Valeur en 22px ExtraBold, label en 10px SemiBold textSec
+3. **Bouton "Rejouer"** — pleine largeur, accent bg, texte blanc, 16px SemiBold, border-radius 14px, box-shadow. CTA principal
 
-4. **Bouton "Rejouer"** — pleine largeur, accent bg, texte blanc, 16px SemiBold, border-radius 14px, box-shadow. CTA principal
+4. **Icône engrenage** — en haut à droite (opacité 50%), même style que sur l'accueil
 
-5. **Lien "Accueil"** — 12px textSec, discret, sans bordure
+5. **Liens secondaires** — "Accueil" + "Voir le plateau", 12px textSec, discrets, sans bordure, en row centrée avec gap 16px
 
 **Interactions :**
 - Tap "Rejouer" → nouvelle partie immédiate (attribution noir/blanc aléatoire)
 - Tap "Accueil" → retour à l'écran d'accueil
+- Tap "Voir le plateau" → affiche la position finale de la partie (échiquier en état de fin)
+- Tap engrenage → ouvre l'écran réglages
+
+---
+
+### Écran Réglages (Settings)
+
+**Accès** : icône engrenage (opacité 50%) sur l'écran d'accueil (en haut à droite) et lien texte "Réglages" sur l'écran de récap. Non visible pendant la partie.
+
+**Layout** : colonne, padding-top 12px, gap 16px. Flèche retour ← + titre "Réglages" en haut.
+
+**Éléments (de haut en bas) :**
+
+1. **Toggle thème** — card surface, border-radius 18px, row avec label "THÈME" et toggle segmenté Clair/Sombre
+   - Le mode actif est en accent bg + texte blanc
+
+2. **Sélecteur ELO adversaire** — card surface, border-radius 18px
+   - Titre : "NIVEAU ELO" en 12px uppercase textSec
+   - 5 presets en row : 800 / 1000 / 1200 / 1400 / 1600
+   - Le sélectionné est en accent bg + texte blanc, les autres en inputBg + texte normal
+   - Détermine le niveau de jeu de l'IA adversaire
+
+2. **Eval-loss seuils** *(mode dev, visible initialement, à cacher en prod plus tard)* — card surface, border-radius 18px
+   - Titre : "EVAL-LOSS SEUILS (CP)" + badge "DEV" en accent sur fond accent 15%
+   - 2 inputs côte à côte :
+     - T1 (Top→Correct) : seuil en centipawns (défaut 30cp)
+     - T2 (Correct→Bof) : seuil en centipawns (défaut 100cp)
+   - Contrôle la classification des coups : Top = eval-loss 0 à T1, Correct = T1 à T2, Bof = > T2
+
+3. **Depth** *(mode dev)* — card surface, border-radius 18px
+   - Titre : "DEPTH (DEMI-COUPS)" + badge "DEV"
+   - Slider horizontal de 4 à 20 (défaut 12)
+   - Valeur courante affichée en 14px ExtraBold sous le slider
+   - Contrôle la profondeur d'analyse Stockfish pour la génération des 3 coups
+
+4. **Historique des parties** — card surface, border-radius 18px
+   - Titre : "HISTORIQUE" en 12px uppercase textSec
+   - Liste des dernières parties avec :
+     - Icône résultat : ✓ (accent) / ✗ (rouge) / = (textSec)
+     - Stats : "{nb coups} coups · {durée}"
+     - Distribution : "Top X% · Correct X% · Bof X%"
+   - Séparateur divider entre chaque entrée
+
+**Interactions :**
+- Tap preset ELO → sélectionne le niveau, persisté en local storage
+- Edit seuils T1/T2 → ajuste la classification des coups, persisté en local storage
+- Drag slider depth → ajuste la profondeur d'analyse, persisté en local storage
+- Tap ← → retour à l'écran d'accueil
 
 ---
 
@@ -602,6 +659,22 @@ Toutes les animations sont CSS-native (keyframes + transitions). Pas de librairi
 - **Entrée** : slide-up + léger rebond (`translateY(12px) → translateY(-2px) → translateY(0)`), durée **350ms** ease-out
 - **Anneau de cooldown** : stroke SVG qui suit le contour du toast, animation `stroke-dashoffset` linéaire **1.2s**
 
+#### Échec et mat — Transition de fin
+
+- **Tremblement du roi** : le roi maté tremble sur place avec une oscillation décroissante
+  - Keyframes `king-tremble` : `translateX` oscillant de ±2px à ±0.5px + léger `rotate(±1deg)`
+  - Durée **600ms** ease-out, infinite (boucle tant que visible)
+- **Halo rouge** : la case du roi maté reçoit un `box-shadow: inset 0 0 18px 4px rgba(200, 50, 50, 0.4)`
+- **Pulse de fierté** (côté gagnant uniquement) : la pièce qui délivre le mat fait un léger `scale(1 → 1.08 → 1)`, durée **400ms** ease-out, une seule fois — micro-moment de satisfaction
+- **Pause** : ~1.5 secondes sur le plateau avec l'animation visible
+- **Transition** : passage automatique vers l'écran de récap
+
+#### Abandon — Transition de fin
+
+- **Pas de tremblement du roi** — l'abandon est un choix, pas un mat. Le tremblement serait trop "violent" vs l'objectif "zéro frustration"
+- **Transition douce** : fondu global du plateau (`opacity 1 → 0`, durée **400ms** ease-out) → passage direct vers l'écran de récap en mode défaite
+- Pas de halo rouge, pas de pause prolongée
+
 ---
 
 ### Décisions de design transversales
@@ -617,3 +690,231 @@ Toutes les animations sont CSS-native (keyframes + transitions). Pas de librairi
 | Attribution couleur (noir/blanc) | Aléatoire | Simplifie l'onboarding, pas de choix supplémentaire |
 | Stockage parties jouées | Local storage | Pas de compte utilisateur pour le MVP |
 | Promotion pion | Auto-Dame | Pas de choix supplémentaire — préserve le rythme |
+| Abandon | Défaite directe, fondu doux | Tap "Abandonner" → fondu du plateau (pas de tremblement) → récap en mode défaite |
+| Reprise de partie | Direct sur le plateau | Réouverture de l'app = retour immédiat à la partie en cours, pas d'écran intermédiaire |
+| Son | Aucun | Pas de son dans le MVP — le jeu est silencieux |
+| Pat / Égalité | Annoncé avant les 50 coups | Écran récap "Égalité" avec les deux rois debout côte à côte |
+| Labels récap | Top / Correct / Bof | Ton décontracté, pas de jugement absolu — le "top" est le meilleur des 3 options, pas le meilleur coup objectif |
+| Pièces capturées | 22px, opacité 0.85, tri par valeur | D > T > F > C > P — lisibles sans être envahissantes |
+| Cases partagées par 2 flèches | Mélange des teintes | Pas d'écrasement — les deux couleurs se combinent |
+| Annuler vs cooldown expiré | Annuler gagne toujours | Le joueur a la priorité en cas de race condition |
+| Couleurs barres récap | Accent unique | Couleur neutre `#6A8060` pour les 3 barres — aucun lien avec les couleurs des flèches |
+
+## User Journey Flows
+
+### Premier lancement
+
+- Ouverture app → écran d'accueil → tap "Jouer" → attribution aléatoire noir/blanc → plateau
+- Si noir : l'adversaire joue d'abord, puis 3 flèches apparaissent
+- Zéro friction : pas de compte, pas de tutoriel, pas de choix de couleur
+- Compteur : "Première partie !" (pas "0 parties jouées")
+
+### Boucle de jeu (game loop)
+
+```
+3 flèches → tap valide → dismiss + déplacement → toast annulation 1.2s
+    ↑         ↓ (invalide: shake)        ↓ (annuler: retour aux 3 flèches)
+    |                                     ↓ (cooldown expiré)
+    |                              coup adverse animé
+    |                                     ↓
+    |                              partie continue? ──non──→ écran récap
+    └──────────────oui────────────────────┘
+```
+
+- Race condition : "Annuler" gagne toujours vs expiration cooldown
+- Le coup adverse se lance immédiatement après expiration du toast
+- Mat : tremblement roi + halo rouge + pause 1.5s → récap
+- Pat : transition directe → récap "Égalité"
+
+### Reprise de partie
+
+- Ouverture app avec partie sauvegardée → plateau restauré directement (pas d'écran intermédiaire)
+- Le joueur retrouve la position exacte comme s'il n'était jamais parti
+- 3 flèches regénérées par Stockfish sur la position courante (pas de sauvegarde des flèches précédentes)
+- Si c'était le tour de l'adversaire : son coup est joué d'abord, puis les flèches apparaissent
+
+### Abandon
+
+- Tap "Abandonner" → toast de confirmation (même UI que le toast d'annulation de coup)
+- Texte : "Partie abandonnée" + bouton "Annuler" + anneau cooldown 1.2s
+- Tap "Annuler" pendant le cooldown → retour à la partie
+- Cooldown expiré → fondu du plateau (400ms) → écran récap en mode défaite
+- Race condition identique : "Annuler" gagne toujours
+
+### Journey Patterns
+
+| Pattern | Description |
+|---------|-------------|
+| **Zéro interruption** | Jamais de modale, popup ou dialogue bloquant pendant le jeu |
+| **Feedback immédiat** | Chaque tap produit un retour visuel en < 200ms |
+| **Retour au cycle** | Toute action converge vers le game loop ou l'accueil — pas de cul-de-sac |
+| **Priorité joueur** | En cas d'ambiguïté temporelle, le joueur a toujours la priorité |
+| **Continuité silencieuse** | La reprise de partie est invisible — zéro transition |
+| **Toast cooldown réutilisable** | Même composant pour annulation de coup et confirmation d'abandon |
+
+## Component Strategy
+
+### Design System Components
+
+**Tailwind CSS + tokens custom** couvre nativement :
+- Layout : flex columns, spacers, padding/gap
+- Typographie : Poppins via tokens (ExtraBold, SemiBold, tailles définies)
+- Couleurs : tokens `bg`, `text`, `textSec`, `surface`, `accent` par thème
+- Boutons standard : "Jouer", "Rejouer" (accent bg, border-radius 14px)
+- Cards : sections réglages (surface bg, border-radius 18px, box-shadow)
+- Toggle segmenté : thème Clair/Sombre
+- Inputs : champs T1/T2, slider depth
+
+### Custom Components
+
+| Composant | Rôle | Réutilisation |
+|-----------|------|---------------|
+| **ChessBoard** | Grille 8×8 avec pièces, teintes de cases, overlay SVG flèches | Écran jeu, ouverture, fin, reprise |
+| **ArrowOverlay** | SVG des 3 flèches (tracé droit + L cavalier, têtes arrondies) | Écran jeu |
+| **ToastCooldown** | Toast slide-up avec anneau SVG cooldown + bouton "Annuler" | Annulation coup, confirmation abandon |
+| **CapturedPieces** | Rangée horizontale de pièces capturées (22px, triées par valeur) | Écran jeu (×2 : joueur + adversaire) |
+| **RecapCard** | Card "Tes choix" avec 3 barres de progression + labels | Écran récap |
+| **EloSelector** | Row de 5 presets cliquables (800-1600) | Réglages |
+| **GameHistory** | Liste des parties passées avec icône résultat + stats | Réglages |
+| **MiniBoard** | Grille 4×4 avec mini-flèches (illustration accueil) | Écran accueil |
+| **AppHeader** | Logo `ch3ss` (20px) centré + engrenage optionnel | Accueil, récap |
+
+### Component Implementation Strategy
+
+- Tous les composants custom utilisent les tokens Tailwind définis (couleurs thème, spacing, border-radius)
+- **ToastCooldown** est le seul composant réutilisé dans 2 contextes différents (coup joué + abandon) — paramétré par le texte affiché
+- **ChessBoard** est le composant le plus complexe : gère les pièces, les teintes de cases, et le positionnement de l'overlay SVG. Toutes les animations (déplacement, capture, shake) sont pilotées par CSS
+
+### Implementation Roadmap
+
+**Phase 1 — Core (game loop fonctionnel) :**
+- ChessBoard + ArrowOverlay + ToastCooldown + CapturedPieces
+
+**Phase 2 — Écrans secondaires :**
+- RecapCard + AppHeader + MiniBoard
+
+**Phase 3 — Réglages :**
+- EloSelector + GameHistory + inputs dev (seuils, depth)
+
+## UX Consistency Patterns
+
+### Hiérarchie des boutons
+
+| Niveau | Style | Usage |
+|--------|-------|-------|
+| **Primaire** | Accent bg, texte blanc, border-radius 14px, box-shadow | "Jouer", "Rejouer" — une seule action primaire par écran |
+| **Secondaire** | Accent texte sur fond accent 10%, border-radius 14px | "Annuler" dans le toast cooldown |
+| **Tertiaire** | textSec, sans fond ni bordure, 11-12px | "Abandonner", "Accueil", "Voir le plateau" |
+| **Icône** | Opacité 50%, sans fond | Engrenage (réglages) |
+
+**Règle** : jamais plus d'un bouton primaire visible par écran. Le bouton primaire est toujours l'action que le joueur est le plus susceptible de vouloir faire.
+
+### Feedback Patterns
+
+| Situation | Feedback |
+|-----------|----------|
+| **Tap valide** (flèche/case teintée) | Dismiss flèches + déplacement pièce (< 200ms de réponse) |
+| **Tap invalide** (case non proposée) | Shake des 3 flèches + pulse opacité (300ms) |
+| **Coup joué** | Toast cooldown slide-up (350ms) |
+| **Coup adverse** | Déplacement pièce animé + teinte cases neutres |
+| **Mat** | Tremblement roi + halo rouge + pulse pièce matante |
+| **Abandon confirmé** | Fondu du plateau (400ms) |
+| **Sélection réglage** (ELO, thème) | Changement visuel immédiat (pas de toast de confirmation) |
+
+**Règle** : tout feedback est visuel et non-bloquant. Pas de toast de succès, pas de notification — l'état de l'interface EST le feedback.
+
+### Navigation Patterns
+
+| Transition | Comportement |
+|------------|-------------|
+| Accueil → Partie | Immédiat (pas de transition) |
+| Partie → Récap | Via mat (pause 1.5s) ou abandon (fondu 400ms) |
+| Récap → Nouvelle partie | Immédiat (tap "Rejouer") |
+| Récap → Accueil | Immédiat |
+| Accueil/Récap → Réglages | Tap engrenage |
+| Réglages → Retour | Tap flèche ← |
+| Reprise (app rouverte) | Direct sur le plateau, pas d'écran intermédiaire |
+
+**Règle** : pas de transitions d'écran animées (slide, fade entre pages). Les transitions sont réservées aux éléments de gameplay. La navigation est instantanée.
+
+### États vides et edge cases
+
+| Situation | Comportement |
+|-----------|-------------|
+| **Première visite** | "Première partie !" au lieu de "0 parties jouées" |
+| **Historique vide** | Section historique masquée ou texte "Aucune partie" |
+| **Aucune pièce capturée** | Rangée CapturedPieces invisible (pas de placeholder vide) |
+| **Perte de focus** (app en arrière-plan) | Partie sauvegardée en localStorage, reprise transparente |
+| **Promotion pion** | Auto-Dame, pas de choix — préserve le rythme |
+
+## Responsive Design & Accessibility
+
+### Responsive Strategy
+
+**Approche : mobile-first, le reste fonctionne.**
+
+L'app est conçue pour mobile (360-430px de large). Les écrans plus grands affichent le même layout centré, sans réorganisation.
+
+| Device | Stratégie |
+|--------|-----------|
+| **Mobile** (320-480px) | Design natif — le board occupe ~95% de la largeur |
+| **Tablette** (481-1023px) | Layout identique, centré, board avec max-width |
+| **Desktop** (1024px+) | Layout identique, centré, max-width ~480px pour l'ensemble de l'app |
+
+Pas de layout multi-colonnes — ch3ss est une app mono-colonne à tous les breakpoints. L'espace supplémentaire est simplement du padding.
+
+### Breakpoints
+
+Approche mobile-first avec Tailwind :
+
+| Breakpoint | Rôle |
+|------------|------|
+| **Base** (< 480px) | Design par défaut — tout est conçu pour cette taille |
+| **sm** (≥ 480px) | `max-width: 480px` + `margin: 0 auto` sur le conteneur principal |
+
+Un seul breakpoint suffit. Au-delà de 480px, on centre et on cap la largeur. Le board reste carré et s'adapte via `width: 100%; aspect-ratio: 1`.
+
+### Accessibility (WCAG AA)
+
+**Contrastes :**
+
+| Paire | Ratio | Verdict |
+|-------|-------|---------|
+| `text` (#3D3A36) sur `bg` (#EDE8DF) | ~7.5:1 | AA |
+| `text` (#E0DDD6) sur `bg` (#1E2A22) | ~9.2:1 | AA |
+| `textSec` (#8A8078) sur `bg` (#EDE8DF) | ~3.8:1 | AA pour grand texte, limite pour petit texte |
+| `textSec` (#8A9A86) sur `bg` (#1E2A22) | ~4.1:1 | AA pour texte ≥ 14px bold |
+| Blanc sur `accent` (#6A8060) | ~4.6:1 | AA |
+
+Les textes en `textSec` ne descendent jamais en dessous de 11px et sont non-critiques (compteur parties, labels secondaires). Acceptable en AA.
+
+**Touch targets :**
+- Boutons primaires/secondaires : padding ≥ 14px → largeur > 44px
+- Cases de l'échiquier : board 360px / 8 = **45px par case** — conforme
+- Sur écran 320px : 320px / 8 = **40px** — légèrement sous les 44px recommandés. Acceptable car le tap est assisté par les teintes de cases (zone visuelle élargie)
+
+**Clavier :**
+- Navigation entre les 3 flèches avec Tab / Shift+Tab
+- Entrée ou Espace pour jouer le coup sélectionné
+- Escape pour annuler (pendant le cooldown du toast)
+- Focus visible sur la flèche/case active (outline accent 2px)
+
+**Screen reader :**
+- Chaque flèche annonce : "Coup [n] : [pièce] de [case départ] vers [case arrivée]"
+- Board en `role="grid"`, cases en `role="gridcell"`
+- Toast annonce "Coup joué. Annuler disponible pendant [n] secondes"
+- Résultat de fin annoncé : "Partie terminée. Victoire/Défaite/Égalité en [n] coups"
+
+**`prefers-reduced-motion` :**
+- Désactive : shake, tremblement roi, cascade flèches, bounce toast
+- Conserve : déplacements de pièces (instantanés au lieu d'animés), teintes de cases (sans transition)
+
+### Testing Strategy
+
+| Type | Outil/Méthode |
+|------|---------------|
+| Contrastes | axe DevTools / Lighthouse |
+| Clavier | Test manuel navigation complète sans souris |
+| Screen reader | VoiceOver (iOS/macOS) — cible primaire mobile |
+| Touch targets | Chrome DevTools device mode (320px, 360px, 414px) |
+| Reduced motion | `prefers-reduced-motion: reduce` dans DevTools |

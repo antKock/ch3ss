@@ -103,6 +103,26 @@
     to   { stroke-dashoffset: var(--perim); }
   }
 
+  /* King checkmate effects */
+  @keyframes king-tremble {
+    0%, 100% { transform: translateX(0); }
+    10%  { transform: translateX(-2px) rotate(-1deg); }
+    20%  { transform: translateX(2px) rotate(1deg); }
+    30%  { transform: translateX(-2px) rotate(-0.5deg); }
+    40%  { transform: translateX(2px) rotate(0.5deg); }
+    50%  { transform: translateX(-1.5px); }
+    60%  { transform: translateX(1.5px); }
+    70%  { transform: translateX(-1px); }
+    80%  { transform: translateX(1px); }
+    90%  { transform: translateX(-0.5px); }
+  }
+  .king-tremble {
+    animation: king-tremble 600ms ease-out infinite;
+  }
+  .king-halo {
+    box-shadow: inset 0 0 18px 4px rgba(200, 50, 50, 0.4);
+  }
+
   /* Progress bars for recap */
   .bar-track { width: 100%; height: 6px; border-radius: 3px; position: relative; }
   .bar-fill { height: 100%; border-radius: 3px; position: absolute; left: 0; top: 0; }
@@ -115,14 +135,16 @@
   <a href="#s-game">Jeu</a>
   <a href="#s-undo">Annulation</a>
   <a href="#s-opp">Adversaire</a>
-  <a href="#s-endgame">Fin de partie</a>
+  <a href="#s-mat">Mat</a>
+  <a href="#s-endgame">Recap</a>
+  <a href="#s-settings">Settings</a>
   <a href="#s-anim">Animations</a>
 </nav>
 
 <div id="screens"></div>
 
 <script>
-const BASE = 'https://cdn.jsdelivr.net/gh/lichess-org/lila@master/public/piece/staunty';
+const BASE = 'https://cdn.jsdelivr.net/gh/lichess-org/lila@6e3b5257/public/piece/staunty';
 const C = {
   bg: '#F8F6F1',
   surface: '#ffffff',
@@ -153,6 +175,193 @@ const moves = [
   { sr:5,sc:5, dr:4,dd:7 },
 ];
 
+// Position initiale
+const startPos = [
+  ['bR','bN','bB','bQ','bK','bB','bN','bR'],
+  ['bP','bP','bP','bP','bP','bP','bP','bP'],
+  ['','','','','','','',''],
+  ['','','','','','','',''],
+  ['','','','','','','',''],
+  ['','','','','','','',''],
+  ['wP','wP','wP','wP','wP','wP','wP','wP'],
+  ['wR','wN','wB','wQ','wK','wB','wN','wR'],
+];
+
+// 3 ouvertures classiques blancs
+const openingMoves = [
+  { sr:6,sc:4, dr:4,dd:4 },  // e2→e4
+  { sr:6,sc:3, dr:4,dd:3 },  // d2→d4
+  { sr:7,sc:1, dr:5,dd:2 },  // Nb1→c3 (cavalier)
+];
+
+// Position mid-game vue côté noir (board retourné) — après 1.e4 e5 2.Nf3 Nc6 3.Bc4
+const blackPos = [
+  ['wR','','wB','wQ','wK','','wN','wR'],
+  ['wP','wP','wP','wP','','wP','wP','wP'],
+  ['','','','','','','',''],
+  ['','','wB','','wP','','',''],
+  ['','','','','bP','','',''],
+  ['','','bN','','','','',''],
+  ['bP','bP','bP','bP','','bP','bP','bP'],
+  ['bR','','bB','bQ','bK','bB','bN','bR'],
+];
+
+// Coups proposés au joueur noir (vu depuis son côté, donc coordonnées retournées)
+const blackMoves = [
+  { sr:5,sc:2, dr:3,dd:3 },  // Nc6→d4
+  { sr:6,sc:5, dr:5,dd:5 },  // f7→f6
+  { sr:7,sc:5, dr:4,dd:2 },  // Bf8→c5 (cavalier-like path)
+];
+
+function boardFlipped(posArr, movesArr) {
+  let html = '';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      // Flip: row 0 = rank 1 (white side), row 7 = rank 8 (black side)
+      const fr = 7 - r, fc = 7 - c;
+      const light = (fr+fc)%2===0;
+      let bg = light ? C.boardL : C.boardD;
+      if (movesArr) {
+        for (let i = 0; i < movesArr.length; i++) {
+          const m = movesArr[i];
+          if ((r === m.sr && c === m.sc) || (r === m.dr && c === m.dd)) {
+            bg = mixColors(bg, C.arrow[i], 0.45);
+          }
+        }
+      }
+      const piece = posArr[fr][fc];
+      const img = piece ? `<img class="pc" src="${BASE}/${piece}.svg" draggable="false">` : '';
+      html += `<div class="sq" style="background:${bg}">${img}</div>`;
+    }
+  }
+  return html;
+}
+
+// ===================== UNIFIED ARROW GEOMETRY =====================
+// Core arrow computation — all arrow rendering goes through this function.
+// Returns { shaftSvg, headSvg, cx1, cy1, cx2, cy2 }
+function computeArrow(m, opts = {}) {
+  const SZ = opts.sz || 100;
+  const STROKE = opts.stroke || 22;
+  const HEAD_HALF_W = opts.headHalfW || 28;
+  const HEAD_LEN = opts.headLen || 40;
+  const START_OFF = opts.startOffset || 44;
+  const TIP_OFF = opts.tipOffset || 8;
+  const KNIGHT_R = opts.knightR || 28;
+  const RND = opts.rounding ?? 0.22;
+  const color = opts.color || '#000';
+
+  const cx1=m.sc*SZ+SZ/2, cy1=m.sr*SZ+SZ/2;
+  const cx2=m.dd*SZ+SZ/2, cy2=m.dr*SZ+SZ/2;
+  let shaft, hbx, hby, htx, hty, dx, dy;
+
+  if (!isKnightMove(m)) {
+    const ddx=cx2-cx1, ddy=cy2-cy1, len=Math.sqrt(ddx*ddx+ddy*ddy);
+    const ux=ddx/len, uy=ddy/len;
+    shaft=`M${cx1+ux*START_OFF},${cy1+uy*START_OFF} L${cx2-ux*HEAD_LEN},${cy2-uy*HEAD_LEN}`;
+    hbx=cx2-ux*HEAD_LEN; hby=cy2-uy*HEAD_LEN; htx=cx2-ux*TIP_OFF; hty=cy2-uy*TIP_OFF; dx=ux; dy=uy;
+  } else {
+    const dr=Math.abs(m.dr-m.sr), dc=Math.abs(m.dd-m.sc);
+    if (dr>dc) {
+      const mx=cx1, my=cy2, dirV=cy2>cy1?1:-1, dirH=cx2>cx1?1:-1;
+      shaft=`M${mx},${cy1+START_OFF*dirV} L${mx},${my-KNIGHT_R*dirV} Q${mx},${my} ${mx+KNIGHT_R*dirH},${my} L${cx2-HEAD_LEN*dirH},${my}`;
+      hbx=cx2-HEAD_LEN*dirH;hby=my;htx=cx2-TIP_OFF*dirH;hty=my;dx=dirH;dy=0;
+    } else {
+      const mx=cx2, my=cy1, dirH=cx2>cx1?1:-1, dirV=cy2>cy1?1:-1;
+      shaft=`M${cx1+START_OFF*dirH},${my} L${mx-KNIGHT_R*dirH},${my} Q${mx},${my} ${mx},${my+KNIGHT_R*dirV} L${mx},${cy2-HEAD_LEN*dirV}`;
+      hbx=mx;hby=cy2-HEAD_LEN*dirV;htx=mx;hty=cy2-TIP_OFF*dirV;dx=0;dy=dirV;
+    }
+  }
+
+  const px=-dy, py=dx;
+  const lx=hbx+px*HEAD_HALF_W, ly=hby+py*HEAD_HALF_W;
+  const rx=hbx-px*HEAD_HALF_W, ry=hby-py*HEAD_HALF_W;
+  const r=RND;
+  const lmx=lx+(htx-lx)*r, lmy=ly+(hty-ly)*r, rmx=rx+(htx-rx)*r, rmy=ry+(hty-ry)*r;
+  const blx=lx+(rx-lx)*r, bly=ly+(ry-ly)*r, brx=rx+(lx-rx)*r, bry=ry+(ly-ry)*r;
+  const tlx=htx+(lx-htx)*r, tly=hty+(ly-hty)*r, trx=htx+(rx-htx)*r, tryPt=hty+(ry-hty)*r;
+
+  const shaftSvg = `<path d="${shaft}" stroke="${color}" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+  const headSvg = `<path d="M${blx},${bly} Q${lx},${ly} ${lmx},${lmy} L${tlx},${tly} Q${htx},${hty} ${trx},${tryPt} L${rmx},${rmy} Q${rx},${ry} ${brx},${bry} Z" fill="${color}"/>`;
+  return { shaftSvg, headSvg, cx1, cy1, cx2, cy2 };
+}
+
+// Render multiple arrows as an SVG overlay
+function renderArrowsSVG(movesArr, opts = {}) {
+  let paths = '';
+  movesArr.forEach((m, i) => {
+    const color = m.color || C.arrow[i];
+    const { shaftSvg, headSvg } = computeArrow(m, { ...opts, color });
+    paths += shaftSvg + headSvg;
+  });
+  const vb = opts.viewBox || '0 0 800 800';
+  const cls = opts.cssClass || 'arrow-svg';
+  const style = opts.svgStyle || '';
+  return `<svg class="${cls}" viewBox="${vb}"${style ? ` style="${style}"` : ''}>${paths}</svg>`;
+}
+
+function boardHTMLCustom(posArr, movesArr) {
+  let html = '';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const light = (r+c)%2===0;
+      let bg = light ? C.boardL : C.boardD;
+      if (movesArr) {
+        for (let i = 0; i < movesArr.length; i++) {
+          const m = movesArr[i];
+          if ((r === m.sr && c === m.sc) || (r === m.dr && c === m.dd)) {
+            bg = mixColors(bg, C.arrow[i], 0.45);
+          }
+        }
+      }
+      const piece = posArr[r][c];
+      const img = piece ? `<img class="pc" src="${BASE}/${piece}.svg" draggable="false">` : '';
+      html += `<div class="sq" style="background:${bg}">${img}</div>`;
+    }
+  }
+  return html;
+}
+
+function openingScreen(variant) {
+  const v = variant || { text: C.text, textSec: C.textSec };
+  const isDark = v.bg && parseInt(v.bg.slice(1,3),16) < 80;
+  return `
+    <div style="display:flex;flex-direction:column;height:100%;min-height:560px">
+      ${appHeader(v.text, isDark)}
+      <div style="flex:1"></div>
+      <div style="position:relative">
+        <div class="board">${boardHTMLCustom(startPos, openingMoves)}</div>
+        ${renderArrowsSVG(openingMoves)}
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;justify-content:center;padding-bottom:8px">
+        <button style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:500;color:${v.textSec};background:none;border:none;cursor:pointer;padding:6px 16px;opacity:0.5">Abandonner</button>
+      </div>
+    </div>
+  `;
+}
+
+function blackGameScreen(variant) {
+  const v = variant || { text: C.text, textSec: C.textSec };
+  const isDark = v.bg && parseInt(v.bg.slice(1,3),16) < 80;
+  return `
+    <div style="display:flex;flex-direction:column;height:100%;min-height:560px">
+      ${appHeader(v.text, isDark)}
+      <div style="flex:1"></div>
+      ${capturedRow(['bP'], 'flex-start', isDark)}
+      <div style="position:relative">
+        <div class="board">${boardFlipped(blackPos, blackMoves)}</div>
+        ${renderArrowsSVG(blackMoves)}
+      </div>
+      ${capturedRow(['wP','wN'], 'flex-start', isDark)}
+      <div style="flex:1"></div>
+      <div style="display:flex;justify-content:center;padding-bottom:8px">
+        <button style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:500;color:${v.textSec};background:none;border:none;cursor:pointer;padding:6px 16px;opacity:0.5">Abandonner</button>
+      </div>
+    </div>
+  `;
+}
+
 function hexToRgb(hex) {
   const h = hex.replace('#','');
   return [parseInt(h.substring(0,2),16), parseInt(h.substring(2,4),16), parseInt(h.substring(4,6),16)].join(',');
@@ -171,7 +380,7 @@ function statusBar(color) {
   return `<div class="status-bar" style="color:${color}"><span>9:41</span><span>●●●● 5G 🔋</span></div>`;
 }
 
-function boardHTML(id, withArrows = true) {
+function boardHTML(withArrows = true) {
   let html = '';
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
@@ -200,64 +409,7 @@ function isKnightMove(m) {
 }
 
 function arrowsSVG() {
-  const SZ = 100;
-  const STROKE = 22;
-  const HEAD_HALF_W = 28;
-  const HEAD_LEN = 40;
-  let paths = '';
-
-  moves.forEach((m, i) => {
-    const cx1 = m.sc*SZ+SZ/2, cy1 = m.sr*SZ+SZ/2;
-    const cx2 = m.dd*SZ+SZ/2, cy2 = m.dr*SZ+SZ/2;
-    let shaft, hbx, hby, htx, hty, dx, dy;
-
-    if (!isKnightMove(m)) {
-      const ddx = cx2-cx1, ddy = cy2-cy1;
-      const len = Math.sqrt(ddx*ddx+ddy*ddy);
-      const ux = ddx/len, uy = ddy/len;
-      const sx = cx1+ux*44, sy = cy1+uy*44;
-      hbx = cx2-ux*HEAD_LEN; hby = cy2-uy*HEAD_LEN;
-      htx = cx2-ux*8; hty = cy2-uy*8;
-      shaft = `M${sx},${sy} L${hbx},${hby}`;
-      dx = ux; dy = uy;
-    } else {
-      const dr = Math.abs(m.dr-m.sr), dc = Math.abs(m.dd-m.sc);
-      const R = 28;
-      if (dr > dc) {
-        const mx = cx1, my = cy2;
-        const dirV = cy2>cy1?1:-1, dirH = cx2>cx1?1:-1;
-        const sy = cy1+44*dirV;
-        const cornerY = my-R*dirV, cornerX = mx+R*dirH;
-        hbx = cx2-HEAD_LEN*dirH; hby = my; htx = cx2-8*dirH; hty = my;
-        shaft = `M${mx},${sy} L${mx},${cornerY} Q${mx},${my} ${cornerX},${my} L${hbx},${my}`;
-        dx = dirH; dy = 0;
-      } else {
-        const mx = cx2, my = cy1;
-        const dirH = cx2>cx1?1:-1, dirV = cy2>cy1?1:-1;
-        const sx = cx1+44*dirH;
-        const cornerX = mx-R*dirH, cornerY = my+R*dirV;
-        hbx = mx; hby = cy2-HEAD_LEN*dirV; htx = mx; hty = cy2-8*dirV;
-        shaft = `M${sx},${my} L${cornerX},${my} Q${mx},${my} ${mx},${cornerY} L${mx},${hby}`;
-        dx = 0; dy = dirV;
-      }
-    }
-
-    const px = -dy, py = dx;
-    const lx = hbx+px*HEAD_HALF_W, ly = hby+py*HEAD_HALF_W;
-    const rx = hbx-px*HEAD_HALF_W, ry = hby-py*HEAD_HALF_W;
-    const r = 0.22;
-    const lmx=lx+(htx-lx)*r, lmy=ly+(hty-ly)*r;
-    const rmx=rx+(htx-rx)*r, rmy=ry+(hty-ry)*r;
-    const blx=lx+(rx-lx)*r, bly=ly+(ry-ly)*r;
-    const brx=rx+(lx-rx)*r, bry=ry+(ly-ry)*r;
-    const tlx=htx+(lx-htx)*r, tly=hty+(ly-hty)*r;
-    const trx=htx+(rx-htx)*r, try_=hty+(ry-hty)*r;
-
-    paths += `<path d="${shaft}" stroke="${C.arrow[i]}" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
-    paths += `<path d="M${blx},${bly} Q${lx},${ly} ${lmx},${lmy} L${tlx},${tly} Q${htx},${hty} ${trx},${try_} L${rmx},${rmy} Q${rx},${ry} ${brx},${bry} Z" fill="${C.arrow[i]}"/>`;
-  });
-
-  return `<svg class="arrow-svg" viewBox="0 0 800 800">${paths}</svg>`;
+  return renderArrowsSVG(moves);
 }
 
 function phone(label, bg, content) {
@@ -273,55 +425,24 @@ function phone(label, bg, content) {
 // ===================== ECRAN ACCUEIL =====================
 
 function miniArrowSVG() {
-  // 3 arrows on 4x4 mini board (viewBox 0 0 400 400, each cell = 100px)
-  // Same style as game arrows: rounded heads, L-shaped knight move for arrow[2]
-  const SZ = 100, STROKE = 22, HEAD_HALF_W = 28, HEAD_LEN = 38, r = 0.22;
   const miniMoves = [
-    { sr:3,sc:1, dr:1,dd:1, color:C.arrow[0] }, // straight up
-    { sr:3,sc:2, dr:2,dd:2, color:C.arrow[1] }, // short up
-    { sr:2,sc:3, dr:0,dd:2, color:C.arrow[2] }, // knight L-shape (2 up, 1 left)
+    { sr:3,sc:1, dr:1,dd:1, color:C.arrow[0] },
+    { sr:3,sc:2, dr:2,dd:2, color:C.arrow[1] },
+    { sr:2,sc:3, dr:0,dd:2, color:C.arrow[2] },
   ];
-  let paths = '';
-  miniMoves.forEach(m => {
-    const cx1=m.sc*SZ+SZ/2, cy1=m.sr*SZ+SZ/2;
-    const cx2=m.dd*SZ+SZ/2, cy2=m.dr*SZ+SZ/2;
-    let shaft, hbx, hby, htx, hty, dx, dy;
-    const adr=Math.abs(m.dr-m.sr), adc=Math.abs(m.dd-m.sc);
-    const isKnight = (adr===2&&adc===1)||(adr===1&&adc===2);
-
-    if (!isKnight) {
-      const ddx=cx2-cx1, ddy=cy2-cy1, len=Math.sqrt(ddx*ddx+ddy*ddy);
-      const ux=ddx/len, uy=ddy/len;
-      shaft=`M${cx1+ux*30},${cy1+uy*30} L${cx2-ux*HEAD_LEN},${cy2-uy*HEAD_LEN}`;
-      hbx=cx2-ux*HEAD_LEN; hby=cy2-uy*HEAD_LEN; htx=cx2-ux*5; hty=cy2-uy*5; dx=ux; dy=uy;
-    } else {
-      const R=18;
-      if (adr>adc) {
-        const mx=cx1,my=cy2, dirV=cy2>cy1?1:-1, dirH=cx2>cx1?1:-1;
-        shaft=`M${mx},${cy1+30*dirV} L${mx},${my-R*dirV} Q${mx},${my} ${mx+R*dirH},${my} L${cx2-HEAD_LEN*dirH},${my}`;
-        hbx=cx2-HEAD_LEN*dirH;hby=my;htx=cx2-5*dirH;hty=my;dx=dirH;dy=0;
-      } else {
-        const mx=cx2,my=cy1, dirH=cx2>cx1?1:-1, dirV=cy2>cy1?1:-1;
-        shaft=`M${cx1+30*dirH},${my} L${mx-R*dirH},${my} Q${mx},${my} ${mx},${my+R*dirV} L${mx},${cy2-HEAD_LEN*dirV}`;
-        hbx=mx;hby=cy2-HEAD_LEN*dirV;htx=mx;hty=cy2-5*dirV;dx=0;dy=dirV;
-      }
-    }
-    const px=-dy, py=dx;
-    const lx=hbx+px*HEAD_HALF_W,ly=hby+py*HEAD_HALF_W,rx=hbx-px*HEAD_HALF_W,ry=hby-py*HEAD_HALF_W;
-    const lmx=lx+(htx-lx)*r,lmy=ly+(hty-ly)*r,rmx=rx+(htx-rx)*r,rmy=ry+(hty-ry)*r;
-    const blx=lx+(rx-lx)*r,bly=ly+(ry-ly)*r,brx=rx+(lx-rx)*r,bry=ry+(ly-ry)*r;
-    const tlx=htx+(lx-htx)*r,tly=hty+(ly-hty)*r,trx=htx+(rx-htx)*r,try_=hty+(ry-hty)*r;
-
-    paths+=`<path d="${shaft}" stroke="${m.color}" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
-    paths+=`<path d="M${blx},${bly} Q${lx},${ly} ${lmx},${lmy} L${tlx},${tly} Q${htx},${hty} ${trx},${try_} L${rmx},${rmy} Q${rx},${ry} ${brx},${bry} Z" fill="${m.color}"/>`;
+  return renderArrowsSVG(miniMoves, {
+    headLen:38, startOffset:30, tipOffset:5, knightR:18,
+    viewBox:'0 0 400 400', cssClass:'',
+    svgStyle:'position:absolute;inset:0;z-index:1'
   });
-  return `<svg viewBox="0 0 400 400" style="position:absolute;inset:0;z-index:1">${paths}</svg>`;
 }
 
 function homeScreen(variant) {
   const v = variant || { text: C.text, textSec: C.textSec };
   return `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:480px;gap:24px">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:480px;gap:24px;position:relative">
+      <!-- Gear icon top right -->
+      <div style="position:absolute;top:8px;right:0;opacity:0.5;cursor:pointer;padding:4px">${gearIcon(v.text)}</div>
       <!-- Logo -->
       <div style="text-align:center">
         <div style="font-size:42px;font-weight:800;color:${v.text};letter-spacing:-2px">ch<span style="color:${C.accent}">3</span>ss</div>
@@ -349,32 +470,40 @@ function homeScreen(variant) {
       ">Jouer</button>
 
       <!-- Subtle stats -->
-      <div style="font-size:11px;font-weight:500;color:${v.textSec}">12 parties jouees</div>
+      <div style="font-size:11px;font-weight:500;color:${v.textSec}">12 parties jouées</div>
     </div>
   `;
 }
 
 // ===================== ECRAN DE JEU =====================
 
+// Piece value order for captured pieces display: Q > R > B > N > P
+const PIECE_VALUE_ORDER = { Q:0, R:1, B:2, N:3, P:4 };
+
 function capturedRow(pieces, align, isDark) {
-  const imgs = pieces.map(p => {
+  const sorted = [...pieces].sort((a, b) => {
+    const va = PIECE_VALUE_ORDER[a[1]] ?? 9;
+    const vb = PIECE_VALUE_ORDER[b[1]] ?? 9;
+    return va - vb;
+  });
+  const imgs = sorted.map(p => {
     const isBlackPiece = p.startsWith('b');
     const filter = isDark && isBlackPiece
       ? 'brightness(1.6) drop-shadow(0 0 2px rgba(255,255,255,0.3))'
       : 'brightness(1.1) drop-shadow(0 0 1px rgba(0,0,0,0.15))';
-    return `<img src="${BASE}/${p}.svg" style="width:18px;height:18px;filter:${filter};opacity:0.7" draggable="false">`;
+    return `<img src="${BASE}/${p}.svg" style="width:22px;height:22px;filter:${filter};opacity:0.85" draggable="false">`;
   }).join('');
-  return `<div style="display:flex;gap:2px;align-items:center;min-height:22px;justify-content:${align};padding:0 2px">${imgs}</div>`;
+  return `<div style="display:flex;gap:2px;align-items:center;min-height:26px;justify-content:${align};padding:0 2px">${imgs}</div>`;
+}
+
+function gearIcon(tc) {
+  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${tc}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
 }
 
 function appHeader(textColor, isDark) {
   const tc = textColor || C.text;
-  const icon = isDark
-    ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${tc}" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
-    : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${tc}" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
   return `<div style="display:flex;align-items:center;justify-content:center;padding:4px 0 0;position:relative">
     <span style="font-size:20px;font-weight:800;color:${tc};letter-spacing:-1px">ch<span style="color:${C.accent}">3</span>ss</span>
-    <div style="position:absolute;right:0;opacity:0.5;cursor:pointer;padding:4px">${icon}</div>
   </div>`;
 }
 
@@ -399,7 +528,7 @@ function gameScreen(variant) {
 
       <!-- Board centered -->
       <div style="position:relative">
-        <div class="board">${boardHTML('game', true)}</div>
+        <div class="board">${boardHTML(true)}</div>
         ${arrowsSVG()}
       </div>
 
@@ -453,56 +582,30 @@ function boardAfterMove(chosenIdx, showOpponent) {
 }
 
 function singleArrowSVG(chosenIdx) {
-  const m = moves[chosenIdx];
-  const SZ = 100, STROKE = 22, HEAD_HALF_W = 28, HEAD_LEN = 40;
-  const cx1 = m.sc*SZ+SZ/2, cy1 = m.sr*SZ+SZ/2;
-  const cx2 = m.dd*SZ+SZ/2, cy2 = m.dr*SZ+SZ/2;
-  let shaft, hbx, hby, htx, hty, dx, dy;
-
-  if (!isKnightMove(m)) {
-    const ddx=cx2-cx1, ddy=cy2-cy1, len=Math.sqrt(ddx*ddx+ddy*ddy);
-    const ux=ddx/len, uy=ddy/len;
-    shaft = `M${cx1+ux*44},${cy1+uy*44} L${cx2-ux*HEAD_LEN},${cy2-uy*HEAD_LEN}`;
-    hbx=cx2-ux*HEAD_LEN; hby=cy2-uy*HEAD_LEN; htx=cx2-ux*8; hty=cy2-uy*8; dx=ux; dy=uy;
-  } else {
-    const dr=Math.abs(m.dr-m.sr), dc=Math.abs(m.dd-m.sc), R=28;
-    if (dr>dc) {
-      const mx=cx1,my=cy2, dirV=cy2>cy1?1:-1, dirH=cx2>cx1?1:-1;
-      shaft=`M${mx},${cy1+44*dirV} L${mx},${my-R*dirV} Q${mx},${my} ${mx+R*dirH},${my} L${cx2-HEAD_LEN*dirH},${my}`;
-      hbx=cx2-HEAD_LEN*dirH;hby=my;htx=cx2-8*dirH;hty=my;dx=dirH;dy=0;
-    } else {
-      const mx=cx2,my=cy1, dirH=cx2>cx1?1:-1, dirV=cy2>cy1?1:-1;
-      shaft=`M${cx1+44*dirH},${my} L${mx-R*dirH},${my} Q${mx},${my} ${mx},${my+R*dirV} L${mx},${cy2-HEAD_LEN*dirV}`;
-      hbx=mx;hby=cy2-HEAD_LEN*dirV;htx=mx;hty=cy2-8*dirV;dx=0;dy=dirV;
-    }
-  }
-  const px=-dy,py=dx,r=0.22,color=C.arrow[chosenIdx];
-  const lx=hbx+px*HEAD_HALF_W,ly=hby+py*HEAD_HALF_W,rx=hbx-px*HEAD_HALF_W,ry=hby-py*HEAD_HALF_W;
-  const lmx=lx+(htx-lx)*r,lmy=ly+(hty-ly)*r,rmx=rx+(htx-rx)*r,rmy=ry+(hty-ry)*r;
-  const blx=lx+(rx-lx)*r,bly=ly+(ry-ly)*r,brx=rx+(lx-rx)*r,bry=ry+(ly-ry)*r;
-  const tlx=htx+(lx-htx)*r,tly=hty+(ly-hty)*r,trx=htx+(rx-htx)*r,try_=hty+(ry-hty)*r;
-
-  return `<svg class="arrow-svg" viewBox="0 0 800 800" style="opacity:0.5">
-    <path d="${shaft}" stroke="${color}" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    <path d="M${blx},${bly} Q${lx},${ly} ${lmx},${lmy} L${tlx},${tly} Q${htx},${hty} ${trx},${try_} L${rmx},${rmy} Q${rx},${ry} ${brx},${bry} Z" fill="${color}"/>
-  </svg>`;
+  return renderArrowsSVG([moves[chosenIdx]], { svgStyle:'opacity:0.5' });
 }
 
 // ===================== TOAST ANNULATION =====================
+
+// Compute rounded-rect path and perimeter for any w/h/r
+function cooldownRingPath(w, h, r) {
+  const perim = 2*(w-2*r) + 2*(h-2*r) + 2*Math.PI*r;
+  const path = `M${w/2},1 L${w-r},1 Q${w-1},1 ${w-1},${r} L${w-1},${h-r} Q${w-1},${h-1} ${w-r},${h-1} L${r},${h-1} Q1,${h-1} 1,${h-r} L1,${r} Q1,1 ${r},1 Z`;
+  return { path, perim: Math.round(perim) };
+}
 
 function undoToast(variant) {
   const v = variant || { text: C.text };
   const isDark = v.bg && parseInt(v.bg.slice(1,3),16) < 80;
   const toastBg = isDark ? '#2A3A2E' : '#ffffff';
   const w = 274, h = 52, r = 18;
-  const perim = 2*(w-2*r) + 2*(h-2*r) + 2*Math.PI*r;
-  const path = `M${w/2},1 L${w-r},1 Q${w-1},1 ${w-1},${r} L${w-1},${h-r} Q${w-1},${h-1} ${w-r},${h-1} L${r},${h-1} Q1,${h-1} 1,${h-r} L1,${r} Q1,1 ${r},1 Z`;
+  const ring = cooldownRingPath(w, h, r);
 
   return `
     <div style="position:absolute;bottom:16px;left:13px;right:13px;z-index:20">
       <div class="toast toast-anim" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:${toastBg}">
-        <svg class="cooldown-ring" style="--perim:${Math.round(perim)}" viewBox="0 0 ${w} ${h}">
-          <path d="${path}" stroke="${C.accent}" stroke-dasharray="${Math.round(perim)}" />
+        <svg class="cooldown-ring" style="--perim:${ring.perim}" viewBox="0 0 ${w} ${h}">
+          <path d="${ring.path}" stroke="${C.accent}" stroke-dasharray="${ring.perim}" />
         </svg>
         <div style="font-size:13px;font-weight:600;color:${v.text};flex:1">Coup joué</div>
         <button style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:${C.accent};background:rgba(106,128,96,0.1);border:none;border-radius:8px;padding:6px 14px;cursor:pointer">Annuler</button>
@@ -511,52 +614,106 @@ function undoToast(variant) {
   `;
 }
 
+// ===================== ECHEC ET MAT (PLATEAU) =====================
+
+// Simplified checkmate position: white queen delivers mate on h7
+const matPos = [
+  ['bR','','','','bK','','','bR'],
+  ['bP','bP','bP','','','bP','','wQ'],
+  ['','','bN','','','bN','bP',''],
+  ['','','','','bP','','',''],
+  ['','','wB','','wP','','',''],
+  ['','','wN','','','','',''],
+  ['wP','wP','wP','','','wP','wP','wP'],
+  ['wR','','','','wK','','','wR'],
+];
+
+function checkmateBoard(variant) {
+  const v = variant || { text: C.text, textSec: C.textSec };
+  const isDark = v.bg && parseInt(v.bg.slice(1,3),16) < 80;
+
+  let boardHtml = '';
+  const kingR = 0, kingC = 4; // black king position
+  const lastMoveFrom = { r:2, c:7 }; // queen came from h6
+  const lastMoveTo = { r:1, c:7 };   // queen to h7 = mate
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const light = (r+c)%2===0;
+      let bg = light ? C.boardL : C.boardD;
+      // Tint the last move squares
+      if ((r === lastMoveFrom.r && c === lastMoveFrom.c) || (r === lastMoveTo.r && c === lastMoveTo.c)) {
+        bg = mixColors(bg, C.opponentTint, 0.35);
+      }
+      const piece = matPos[r][c];
+      const isKing = (r === kingR && c === kingC);
+      const haloClass = isKing ? 'king-halo' : '';
+      const img = piece
+        ? `<img class="pc ${isKing ? 'king-tremble' : ''}" src="${BASE}/${piece}.svg" draggable="false">`
+        : '';
+      boardHtml += `<div class="sq ${haloClass}" style="background:${bg}">${img}</div>`;
+    }
+  }
+
+  return `
+    <div style="display:flex;flex-direction:column;height:100%;min-height:560px">
+      ${appHeader(v.text, isDark)}
+      <div style="flex:1"></div>
+      ${capturedRow(['wP','wB'], 'flex-start', isDark)}
+      <div style="position:relative">
+        <div class="board">${boardHtml}</div>
+      </div>
+      ${capturedRow(['bP','bP'], 'flex-start', isDark)}
+      <div style="flex:1"></div>
+      <div style="height:28px"></div>
+    </div>
+  `;
+}
+
 // ===================== FIN DE PARTIE =====================
 
-function endgameScreen(result, variant) {
+function endgameScreen(result, variant, playerColor) {
   const v = variant || { text: C.text, textSec: C.textSec };
   const isDark = v.bg && parseInt(v.bg.slice(1,3),16) < 80;
   const surface = isDark ? '#2A3A2E' : '#ffffff';
   const trackBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
   const cardShadow = isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 12px rgba(0,0,0,0.06)';
-  const statShadow = isDark ? '0 2px 8px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.04)';
+  const pc = playerColor || 'w';
+  const king = `${pc}K`;
+  const isDraw = result === 'draw';
   const isWin = result === 'win';
-  const title = isWin ? 'Victoire' : 'Defaite';
-  const emoji = isWin ? '♔' : '♚';
-  const subtitle = isWin ? 'Echec et mat en 34 coups' : 'Mat en 28 coups';
+  const title = isDraw ? 'Égalité' : (isWin ? 'Victoire' : 'Défaite');
+  const kingTransform = (isWin || isDraw) ? '' : 'transform:rotate(90deg)';
+  const subtitle = isDraw ? '42 coups · 3:15' : (isWin ? '34 coups · 2:47' : '28 coups · 4:12');
 
+  const barColor = C.accent;
   const levels = [
-    { label:'Brillant',  desc:'Meilleur coup', color:C.arrow[0], pct: isWin ? 38 : 18 },
-    { label:'Solide',    desc:'Bon coup',      color:C.arrow[1], pct: isWin ? 41 : 47 },
-    { label:'Prudent',   desc:'Coup sur',      color:C.arrow[2], pct: isWin ? 21 : 35 },
+    { label:'Top',     pct: isDraw ? 25 : (isWin ? 38 : 18) },
+    { label:'Correct', pct: isDraw ? 48 : (isWin ? 41 : 47) },
+    { label:'Bof',     pct: isDraw ? 27 : (isWin ? 21 : 35) },
   ];
 
+  // Égalité : deux rois côte à côte
+  const kingIcon = isDraw
+    ? `<div style="display:flex;gap:4px;justify-content:center">
+        <img src="${BASE}/wK.svg" style="width:48px;height:48px" draggable="false">
+        <img src="${BASE}/bK.svg" style="width:48px;height:48px" draggable="false">
+      </div>`
+    : `<img src="${BASE}/${king}.svg" style="width:56px;height:56px;${kingTransform}" draggable="false">`;
+
   return `
-    <div style="display:flex;flex-direction:column;align-items:center;padding-top:40px;gap:20px">
+    <div style="display:flex;flex-direction:column;align-items:center;padding-top:40px;gap:20px;position:relative">
+      <!-- Gear icon top right -->
+      <div style="position:absolute;top:8px;right:0;opacity:0.5;cursor:pointer;padding:4px">${gearIcon(v.text)}</div>
       <div style="text-align:center">
-        <div style="font-size:48px;line-height:1">${emoji}</div>
+        ${kingIcon}
         <div style="font-size:26px;font-weight:800;color:${v.text};margin-top:8px">${title}</div>
         <div style="font-size:13px;font-weight:500;color:${v.textSec};margin-top:2px">${subtitle}</div>
       </div>
 
       <div style="background:${surface};border-radius:18px;padding:20px;width:100%;box-shadow:${cardShadow}">
         <div style="font-size:12px;font-weight:700;color:${v.textSec};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px">Tes choix</div>
-        ${levels.map(l => recapBar(l.label, l.desc, l.color, l.pct, v, trackBg)).join('')}
-      </div>
-
-      <div style="display:flex;gap:12px;width:100%">
-        <div style="flex:1;background:${surface};border-radius:14px;padding:14px;text-align:center;box-shadow:${statShadow}">
-          <div style="font-size:22px;font-weight:800;color:${v.text}">34</div>
-          <div style="font-size:10px;font-weight:600;color:${v.textSec}">Coups</div>
-        </div>
-        <div style="flex:1;background:${surface};border-radius:14px;padding:14px;text-align:center;box-shadow:${statShadow}">
-          <div style="font-size:22px;font-weight:800;color:${v.text}">2:47</div>
-          <div style="font-size:10px;font-weight:600;color:${v.textSec}">Duree</div>
-        </div>
-        <div style="flex:1;background:${surface};border-radius:14px;padding:14px;text-align:center;box-shadow:${statShadow}">
-          <div style="font-size:22px;font-weight:800;color:${v.text}">${isWin ? '7' : '3'}</div>
-          <div style="font-size:10px;font-weight:600;color:${v.textSec}">Serie</div>
-        </div>
+        ${levels.map(l => recapBar(l.label, barColor, l.pct, v, trackBg)).join('')}
       </div>
 
       <button style="
@@ -567,22 +724,21 @@ function endgameScreen(result, variant) {
         margin-top:4px;
       ">Rejouer</button>
 
-      <button style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:500;color:${v.textSec};background:none;border:none;cursor:pointer;padding:8px">Accueil</button>
+      <div style="display:flex;gap:16px;justify-content:center">
+        <button style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:500;color:${v.textSec};background:none;border:none;cursor:pointer;padding:8px">Accueil</button>
+        <button style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:500;color:${v.textSec};background:none;border:none;cursor:pointer;padding:8px">Voir le plateau</button>
+      </div>
     </div>
   `;
 }
 
-function recapBar(label, desc, color, pct, v, trackBg) {
+function recapBar(label, color, pct, v, trackBg) {
   const vt = v || { text: C.text, textSec: C.textSec };
   const tb = trackBg || 'rgba(0,0,0,0.06)';
   return `
     <div style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-        <div style="display:flex;align-items:center;gap:6px">
-          <div style="width:10px;height:10px;border-radius:50%;background:${color}"></div>
-          <span style="font-size:13px;font-weight:700;color:${vt.text}">${label}</span>
-          <span style="font-size:10px;font-weight:500;color:${vt.textSec}">${desc}</span>
-        </div>
+        <span style="font-size:13px;font-weight:700;color:${vt.text}">${label}</span>
         <span style="font-size:14px;font-weight:800;color:${color}">${pct}%</span>
       </div>
       <div class="bar-track" style="background:${tb}">
@@ -592,41 +748,124 @@ function recapBar(label, desc, color, pct, v, trackBg) {
   `;
 }
 
+// ===================== ECRAN SETTINGS =====================
+
+function settingsScreen(variant) {
+  const v = variant || { text: C.text, textSec: C.textSec };
+  const isDark = v.bg && parseInt(v.bg.slice(1,3),16) < 80;
+  const surface = isDark ? '#2A3A2E' : '#ffffff';
+  const cardShadow = isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 12px rgba(0,0,0,0.06)';
+  const inputBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
+  const divider = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+  const eloSteps = [800, 1000, 1200, 1400, 1600];
+  const selectedElo = 1200;
+
+  const history = [
+    { result:'win',  coups:34, duree:'2:47', top:38, correct:41, bof:21 },
+    { result:'loss', coups:28, duree:'4:12', top:18, correct:47, bof:35 },
+    { result:'win',  coups:41, duree:'3:05', top:42, correct:35, bof:23 },
+    { result:'draw', coups:52, duree:'5:30', top:30, correct:44, bof:26 },
+    { result:'loss', coups:22, duree:'1:58', top:15, correct:40, bof:45 },
+  ];
+
+  const historyRows = history.map(h => {
+    const icon = h.result === 'win' ? '✓' : h.result === 'loss' ? '✗' : '=';
+    const iconColor = h.result === 'win' ? C.accent : (h.result === 'loss' ? '#C05050' : v.textSec);
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid ${divider}">
+        <div style="font-size:16px;font-weight:800;color:${iconColor};width:20px;text-align:center">${icon}</div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:600;color:${v.text}">Top ${h.top}% · Correct ${h.correct}% · Bof ${h.bof}%</div>
+          <div style="font-size:10px;color:${v.textSec};margin-top:1px">${h.coups} coups · ${h.duree}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div style="display:flex;flex-direction:column;padding-top:12px;gap:16px">
+      <!-- Back + title -->
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:18px;color:${v.textSec};cursor:pointer">←</span>
+        <span style="font-size:18px;font-weight:800;color:${v.text}">Réglages</span>
+      </div>
+
+      <!-- Theme toggle -->
+      <div style="background:${surface};border-radius:18px;padding:16px;box-shadow:${cardShadow};display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:12px;font-weight:700;color:${v.textSec};text-transform:uppercase;letter-spacing:0.5px">Thème</div>
+        <div style="display:flex;gap:4px;background:${inputBg};border-radius:10px;padding:3px">
+          <div style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;${isDark ? `color:${v.text};background:none` : `color:#fff;background:${C.accent}`}">Clair</div>
+          <div style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;${isDark ? `color:#fff;background:${C.accent}` : `color:${v.text};background:none`}">Sombre</div>
+        </div>
+      </div>
+
+      <!-- ELO selector -->
+      <div style="background:${surface};border-radius:18px;padding:16px;box-shadow:${cardShadow}">
+        <div style="font-size:12px;font-weight:700;color:${v.textSec};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Niveau ELO</div>
+        <div style="display:flex;gap:6px">
+          ${eloSteps.map(e => `
+            <div style="
+              flex:1;text-align:center;padding:8px 0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;
+              ${e === selectedElo
+                ? `background:${C.accent};color:#fff`
+                : `background:${inputBg};color:${v.text}`}
+            ">${e}</div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Eval-loss seuils (dev) -->
+      <div style="background:${surface};border-radius:18px;padding:16px;box-shadow:${cardShadow}">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:${v.textSec};text-transform:uppercase;letter-spacing:0.5px">Eval-loss seuils (cp)</div>
+          <div style="font-size:9px;font-weight:700;color:${C.accent};background:rgba(106,128,96,0.15);padding:2px 6px;border-radius:4px">DEV</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:10px;font-weight:600;color:${v.textSec};margin-bottom:4px">T1 (Top→Correct)</div>
+            <div style="background:${inputBg};border-radius:8px;padding:6px;font-size:14px;font-weight:800;color:${v.text}">30 cp</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:10px;font-weight:600;color:${v.textSec};margin-bottom:4px">T2 (Correct→Bof)</div>
+            <div style="background:${inputBg};border-radius:8px;padding:6px;font-size:14px;font-weight:800;color:${v.text}">100 cp</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Depth (dev) -->
+      <div style="background:${surface};border-radius:18px;padding:16px;box-shadow:${cardShadow}">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;color:${v.textSec};text-transform:uppercase;letter-spacing:0.5px">Depth (demi-coups)</div>
+          <div style="font-size:9px;font-weight:700;color:${C.accent};background:rgba(106,128,96,0.15);padding:2px 6px;border-radius:4px">DEV</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:11px;font-weight:600;color:${v.textSec}">4</span>
+          <div style="flex:1;height:4px;background:${inputBg};border-radius:2px;position:relative">
+            <div style="width:40%;height:100%;background:${C.accent};border-radius:2px"></div>
+            <div style="position:absolute;top:-4px;left:40%;width:12px;height:12px;background:${C.accent};border-radius:50%;transform:translateX(-50%);box-shadow:0 1px 4px rgba(0,0,0,0.2)"></div>
+          </div>
+          <span style="font-size:11px;font-weight:600;color:${v.textSec}">20</span>
+        </div>
+        <div style="text-align:center;margin-top:8px;font-size:14px;font-weight:800;color:${v.text}">12</div>
+      </div>
+
+      <!-- Historique -->
+      <div style="background:${surface};border-radius:18px;padding:16px;box-shadow:${cardShadow}">
+        <div style="font-size:12px;font-weight:700;color:${v.textSec};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Historique</div>
+        ${historyRows}
+      </div>
+    </div>
+  `;
+}
+
 // ===================== INTERACTIVE ARROW DEMO =====================
 
 function arrowGroup(moveIdx) {
   const m = moves[moveIdx];
-  const SZ = 100, STROKE = 22, HEAD_HALF_W = 28, HEAD_LEN = 40;
-  const cx1 = m.sc*SZ+SZ/2, cy1 = m.sr*SZ+SZ/2;
-  const cx2 = m.dd*SZ+SZ/2, cy2 = m.dr*SZ+SZ/2;
-  let shaft, hbx, hby, htx, hty, dx, dy;
-
-  if (!isKnightMove(m)) {
-    const ddx=cx2-cx1, ddy=cy2-cy1, len=Math.sqrt(ddx*ddx+ddy*ddy);
-    const ux=ddx/len, uy=ddy/len;
-    shaft=`M${cx1+ux*44},${cy1+uy*44} L${cx2-ux*HEAD_LEN},${cy2-uy*HEAD_LEN}`;
-    hbx=cx2-ux*HEAD_LEN; hby=cy2-uy*HEAD_LEN; htx=cx2-ux*8; hty=cy2-uy*8; dx=ux; dy=uy;
-  } else {
-    const dr=Math.abs(m.dr-m.sr), dc=Math.abs(m.dd-m.sc), R=28;
-    if (dr>dc) {
-      const mx=cx1,my=cy2, dirV=cy2>cy1?1:-1, dirH=cx2>cx1?1:-1;
-      shaft=`M${mx},${cy1+44*dirV} L${mx},${my-R*dirV} Q${mx},${my} ${mx+R*dirH},${my} L${cx2-HEAD_LEN*dirH},${my}`;
-      hbx=cx2-HEAD_LEN*dirH;hby=my;htx=cx2-8*dirH;hty=my;dx=dirH;dy=0;
-    } else {
-      const mx=cx2,my=cy1, dirH=cx2>cx1?1:-1, dirV=cy2>cy1?1:-1;
-      shaft=`M${cx1+44*dirH},${my} L${mx-R*dirH},${my} Q${mx},${my} ${mx},${my+R*dirV} L${mx},${cy2-HEAD_LEN*dirV}`;
-      hbx=mx;hby=cy2-HEAD_LEN*dirV;htx=mx;hty=cy2-8*dirV;dx=0;dy=dirV;
-    }
-  }
-  const px=-dy,py=dx, r=0.22, color=C.arrow[moveIdx];
-  const lx=hbx+px*HEAD_HALF_W,ly=hby+py*HEAD_HALF_W,rx=hbx-px*HEAD_HALF_W,ry=hby-py*HEAD_HALF_W;
-  const lmx=lx+(htx-lx)*r,lmy=ly+(hty-ly)*r,rmx=rx+(htx-rx)*r,rmy=ry+(hty-ry)*r;
-  const blx=lx+(rx-lx)*r,bly=ly+(ry-ly)*r,brx=rx+(lx-rx)*r,bry=ry+(ly-ry)*r;
-  const tlx=htx+(lx-htx)*r,tly=hty+(ly-hty)*r,trx=htx+(rx-htx)*r,try_=hty+(ry-hty)*r;
-
+  const color = C.arrow[moveIdx];
+  const { shaftSvg, headSvg, cx1, cy1, cx2, cy2 } = computeArrow(m, { color });
   return `<g data-arrow="${moveIdx}" style="transform-origin:${(cx1+cx2)/2}px ${(cy1+cy2)/2}px">
-    <path d="${shaft}" stroke="${color}" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    <path d="M${blx},${bly} Q${lx},${ly} ${lmx},${lmy} L${tlx},${tly} Q${htx},${hty} ${trx},${try_} L${rmx},${rmy} Q${rx},${ry} ${brx},${bry} Z" fill="${color}"/>
+    ${shaftSvg}${headSvg}
   </g>`;
 }
 
@@ -1031,6 +1270,10 @@ el.innerHTML = `
     ${phone('Light', bgVariants.sable.bg, gameScreen(bgVariants.sable))}
     ${phone('Dark', bgVariants.foret.bg, gameScreen(bgVariants.foret))}
   </div>
+  <div class="phones-row">
+    ${phone('Ouverture — Dark', bgVariants.foret.bg, openingScreen(bgVariants.foret))}
+    ${phone('Joueur Noir — Dark', bgVariants.foret.bg, blackGameScreen(bgVariants.foret))}
+  </div>
 
   <h2 class="section-title" id="s-undo">Apres un coup — Toast annulation</h2>
   <div class="phones-row">
@@ -1096,7 +1339,16 @@ el.innerHTML = `
     `)}
   </div>
 
-  <h2 class="section-title" id="s-endgame">Fin de partie</h2>
+  <h2 class="section-title" id="s-mat">Echec et mat — Plateau</h2>
+  <p style="text-align:center;font-size:11px;color:#8A8078;margin:-4px 0 8px">
+    Le roi mate tremble + halo rouge sur sa case. Pause ~1.5s puis transition vers le recap.
+  </p>
+  <div class="phones-row">
+    ${phone('Mat — Light', bgVariants.sable.bg, checkmateBoard(bgVariants.sable))}
+    ${phone('Mat — Dark', bgVariants.foret.bg, checkmateBoard(bgVariants.foret))}
+  </div>
+
+  <h2 class="section-title" id="s-endgame">Recap de fin de partie</h2>
   <div class="phones-row">
     ${phone('Victoire — Light', bgVariants.sable.bg, endgameScreen('win', bgVariants.sable))}
     ${phone('Victoire — Dark', bgVariants.foret.bg, endgameScreen('win', bgVariants.foret))}
@@ -1104,6 +1356,20 @@ el.innerHTML = `
   <div class="phones-row">
     ${phone('Defaite — Light', bgVariants.sable.bg, endgameScreen('loss', bgVariants.sable))}
     ${phone('Defaite — Dark', bgVariants.foret.bg, endgameScreen('loss', bgVariants.foret))}
+  </div>
+  <div class="phones-row">
+    ${phone('Victoire Noirs — Dark', bgVariants.foret.bg, endgameScreen('win', bgVariants.foret, 'b'))}
+    ${phone('Defaite Noirs — Dark', bgVariants.foret.bg, endgameScreen('loss', bgVariants.foret, 'b'))}
+  </div>
+  <div class="phones-row">
+    ${phone('Egalite — Light', bgVariants.sable.bg, endgameScreen('draw', bgVariants.sable))}
+    ${phone('Egalite — Dark', bgVariants.foret.bg, endgameScreen('draw', bgVariants.foret))}
+  </div>
+
+  <h2 class="section-title" id="s-settings">Settings</h2>
+  <div class="phones-row">
+    ${phone('Settings — Light', bgVariants.sable.bg, settingsScreen(bgVariants.sable))}
+    ${phone('Settings — Dark', bgVariants.foret.bg, settingsScreen(bgVariants.foret))}
   </div>
 
   <h2 class="section-title" id="s-anim">Animations des fleches — Interactif</h2>
