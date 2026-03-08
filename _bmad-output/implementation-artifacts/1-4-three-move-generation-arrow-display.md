@@ -1,6 +1,6 @@
 # Story 1.4: Three-Move Generation & Arrow Display
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,33 +22,33 @@ So that I can choose one of the proposed moves to play.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create useStockfish hook (AC: #9)
-  - [ ] Create `src/hooks/useStockfish.ts`
-  - [ ] Handle engine initialization state (`isEngineReady`)
-  - [ ] Expose `generateMoves(fen)` that calls `stockfish-service.generatePlayerMoves()`
-  - [ ] Store generated moves in Zustand `currentMoves` state
-  - [ ] Handle loading/error states
-- [ ] Task 2: Create MoveArrows component (AC: #1, #2, #3, #5, #6, #7)
-  - [ ] Create `src/components/MoveArrows/MoveArrows.tsx`
-  - [ ] Render SVG overlay on top of the Board component
-  - [ ] Draw arrows from source square to destination square for each of the 3 moves
-  - [ ] Position arrows correctly using board square coordinates (translate chess notation to pixel positions)
-  - [ ] Style arrows with 3 distinct visual treatments (colors: e.g., blue, green, orange — neutral, not quality-indicating)
-  - [ ] Staggered appear animation (arrow 1, then 2, then 3 with slight delay)
-  - [ ] Touch targets: ensure arrow tap areas are ≥44px on mobile
-  - [ ] ARIA labels on each arrow describing the move in plain language
-- [ ] Task 3: Integrate with game flow (AC: #1, #8)
-  - [ ] On game start (or after AI move), trigger move generation via useStockfish
-  - [ ] Pass generated `ClassifiedMove[]` to MoveArrows component
-  - [ ] Handle edge case: fewer than 3 legal moves (endgame positions)
-- [ ] Task 4: Reduced motion support (AC: #7)
-  - [ ] Use Tailwind `motion-reduce:` variant or `prefers-reduced-motion` media query
-  - [ ] When reduced motion preferred, arrows appear instantly (no stagger animation)
-- [ ] Task 5: Write tests (AC: all)
-  - [ ] `MoveArrows.test.tsx` — renders 3 arrows given 3 moves
-  - [ ] Test ARIA labels present and descriptive
-  - [ ] Test arrows render at correct positions
-  - [ ] `useStockfish.test.ts` — hook calls engine service correctly
+- [x] Task 1: Create useStockfish hook (AC: #9)
+  - [x] Create `src/hooks/useStockfish.ts`
+  - [x] Handle engine initialization state (`isEngineReady`)
+  - [x] Expose `generateMoves(fen)` that calls `stockfish-service.generatePlayerMoves()`
+  - [x] Store generated moves in Zustand `currentMoves` state
+  - [x] Handle loading/error states
+- [x] Task 2: Create MoveArrows component (AC: #1, #2, #3, #5, #6, #7)
+  - [x] Create `src/components/MoveArrows/MoveArrows.tsx`
+  - [x] Render SVG overlay on top of the Board component
+  - [x] Draw arrows from source square to destination square for each of the 3 moves
+  - [x] Position arrows correctly using board square coordinates (translate chess notation to pixel positions)
+  - [x] Style arrows with 3 distinct visual treatments (colors: e.g., blue, green, orange — neutral, not quality-indicating)
+  - [x] Staggered appear animation (arrow 1, then 2, then 3 with slight delay)
+  - [x] Touch targets: ensure arrow tap areas are ≥44px on mobile
+  - [x] ARIA labels on each arrow describing the move in plain language
+- [x] Task 3: Integrate with game flow (AC: #1, #8)
+  - [x] On game start (or after AI move), trigger move generation via useStockfish
+  - [x] Pass generated `ClassifiedMove[]` to MoveArrows component
+  - [x] Handle edge case: fewer than 3 legal moves (endgame positions)
+- [x] Task 4: Reduced motion support (AC: #7)
+  - [x] Use Tailwind `motion-reduce:` variant or `prefers-reduced-motion` media query
+  - [x] When reduced motion preferred, arrows appear instantly (no stagger animation)
+- [x] Task 5: Write tests (AC: all)
+  - [x] `MoveArrows.test.tsx` — renders 3 arrows given 3 moves
+  - [x] Test ARIA labels present and descriptive
+  - [x] Test arrows render at correct positions
+  - [x] `useStockfish.test.ts` — hook calls engine service correctly
 
 ## Dev Notes
 
@@ -177,8 +177,26 @@ export function useStockfish() {
 
 ### Agent Model Used
 
-### Debug Log References
+Claude Opus 4.6
 
 ### Completion Notes List
 
+- Created useStockfish hook bridging React lifecycle with engine service
+- Created MoveArrows SVG overlay component with 3 distinct arrow colors
+- Arrows have staggered CSS animation (300ms each, 100ms delays)
+- Touch-optimized hitboxes (44px invisible stroke), ARIA labels, keyboard nav
+- Colors randomly shuffled to avoid quality correlation
+- prefers-reduced-motion support via CSS
+- 4 MoveArrows tests + 1 useStockfish test passing
+
+### Change Log
+
+- 2026-03-08: Story 1.4 implemented — Move arrows + useStockfish hook
+
 ### File List
+
+- src/hooks/useStockfish.ts (new)
+- src/hooks/useStockfish.test.ts (new)
+- src/components/MoveArrows/MoveArrows.tsx (new)
+- src/components/MoveArrows/MoveArrows.test.tsx (new)
+- src/index.css (modified — arrow + checkmate animations)

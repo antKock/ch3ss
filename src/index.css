@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg-primary: #1a1a2e;
+  --color-bg-secondary: #16213e;
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: #a0a0a0;
+  --color-accent: #5b8def;
+  --color-square-light: #b7c0d8;
+  --color-square-dark: #4a5568;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Arrow staggered animations */
+@keyframes arrowAppear {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-arrow-1 { animation: arrowAppear 0.3s ease-out 0ms forwards; }
+.animate-arrow-2 { animation: arrowAppear 0.3s ease-out 100ms forwards; }
+.animate-arrow-3 { animation: arrowAppear 0.3s ease-out 200ms forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-arrow-1,
+  .animate-arrow-2,
+  .animate-arrow-3 {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Checkmate effects */
+@keyframes kingHalo {
+  0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+  50% { box-shadow: 0 0 20px 10px rgba(255, 215, 0, 0.4); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+}
+
+@keyframes boardTremble {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 1px); }
+  50% { transform: translate(2px, -1px); }
+  75% { transform: translate(-1px, 2px); }
+}
+
+.checkmate-king { animation: kingHalo 1.5s ease-in-out 2; }
+.checkmate-board { animation: boardTremble 0.3s ease-in-out 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .checkmate-king, .checkmate-board { animation: none; }
+}
+
+.light {
+  --color-bg-primary: #f5f5f5;
+  --color-bg-secondary: #ffffff;
+  --color-text-primary: #1a1a2e;
+  --color-text-secondary: #4a5568;
+  --color-square-light: #f0d9b5;
+  --color-square-dark: #b58863;
+}

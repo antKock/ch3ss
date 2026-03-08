@@ -1,6 +1,6 @@
 # Story 1.1: Project Foundation
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -32,37 +32,37 @@ So that I have a working development environment to build ch3ss.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Scaffold Vite + React + TypeScript project (AC: #1, #2)
-  - [ ] Run `npm create vite@latest` with `react-swc-ts` template
-  - [ ] Verify `npm run dev` works
-- [ ] Task 2: Install and configure Tailwind CSS (AC: #3)
-  - [ ] Install `tailwindcss @tailwindcss/vite`
-  - [ ] Add Tailwind plugin to `vite.config.ts`
-  - [ ] Add `@import "tailwindcss"` to `index.css`
-  - [ ] Verify utility classes render in a test element
-- [ ] Task 3: Install core dependencies (AC: #4)
-  - [ ] `npm install zustand@5.0.10 chess.js@1.4.0 stockfish@18.0.5`
-  - [ ] Verify packages in `package.json`
-- [ ] Task 4: Configure Vitest + React Testing Library (AC: #5, #14)
-  - [ ] `npm install -D vitest jsdom @testing-library/react @testing-library/jest-dom`
-  - [ ] Create or update `vitest.config.ts` with jsdom environment
-  - [ ] Add `"test": "vitest"` script to `package.json`
-  - [ ] Write a minimal smoke test (e.g., `App.test.tsx` rendering App)
-- [ ] Task 5: Set up project directory structure (AC: #7)
-  - [ ] Create all component directories with `.gitkeep` or placeholder files
-  - [ ] Create `src/engine/`, `src/store/`, `src/hooks/`, `src/types/`
-- [ ] Task 6: Define TypeScript types (AC: #8)
-  - [ ] Create `src/types/chess.ts` with all interfaces from architecture spec
-- [ ] Task 7: Environment variables (AC: #9)
-  - [ ] Create `.env.example` with Stockfish tuning variables
-  - [ ] Create `.env` (gitignored) with same defaults
-- [ ] Task 8: Font and theme setup (AC: #10, #11)
-  - [ ] Add Poppins Google Fonts link to `index.html`
-  - [ ] Configure dark sable theme as default in `index.css`
-  - [ ] Set `font-family: 'Poppins', sans-serif` as base
-- [ ] Task 9: Static asset directories (AC: #12, #13)
-  - [ ] Create `public/pieces/` with 12 SVG chess piece files (simple placeholder SVGs are OK — real assets can come later)
-  - [ ] Create `public/icons/` directory
+- [x] Task 1: Scaffold Vite + React + TypeScript project (AC: #1, #2)
+  - [x] Run `npm create vite@latest` with `react-swc-ts` template
+  - [x] Verify `npm run dev` works
+- [x] Task 2: Install and configure Tailwind CSS (AC: #3)
+  - [x] Install `tailwindcss @tailwindcss/vite`
+  - [x] Add Tailwind plugin to `vite.config.ts`
+  - [x] Add `@import "tailwindcss"` to `index.css`
+  - [x] Verify utility classes render in a test element
+- [x] Task 3: Install core dependencies (AC: #4)
+  - [x] `npm install zustand@5.0.10 chess.js@1.4.0 stockfish@18.0.5`
+  - [x] Verify packages in `package.json`
+- [x] Task 4: Configure Vitest + React Testing Library (AC: #5, #14)
+  - [x] `npm install -D vitest jsdom @testing-library/react @testing-library/jest-dom`
+  - [x] Create or update `vitest.config.ts` with jsdom environment
+  - [x] Add `"test": "vitest"` script to `package.json`
+  - [x] Write a minimal smoke test (e.g., `App.test.tsx` rendering App)
+- [x] Task 5: Set up project directory structure (AC: #7)
+  - [x] Create all component directories with `.gitkeep` or placeholder files
+  - [x] Create `src/engine/`, `src/store/`, `src/hooks/`, `src/types/`
+- [x] Task 6: Define TypeScript types (AC: #8)
+  - [x] Create `src/types/chess.ts` with all interfaces from architecture spec
+- [x] Task 7: Environment variables (AC: #9)
+  - [x] Create `.env.example` with Stockfish tuning variables
+  - [x] Create `.env` (gitignored) with same defaults
+- [x] Task 8: Font and theme setup (AC: #10, #11)
+  - [x] Add Poppins Google Fonts link to `index.html`
+  - [x] Configure dark sable theme as default in `index.css`
+  - [x] Set `font-family: 'Poppins', sans-serif` as base
+- [x] Task 9: Static asset directories (AC: #12, #13)
+  - [x] Create `public/pieces/` with 12 SVG chess piece files (simple placeholder SVGs are OK — real assets can come later)
+  - [x] Create `public/icons/` directory
 
 ## Dev Notes
 
@@ -159,8 +159,44 @@ Set in Tailwind config or `index.css` as the default font family.
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+No issues encountered.
 
 ### Completion Notes List
 
+- Scaffolded Vite + React + SWC + TypeScript project (vite v7.3.1, react v19.2.0)
+- Installed and configured Tailwind CSS v4.2.1 with @tailwindcss/vite plugin
+- Installed zustand@5.0.10, chess.js@1.4.0, stockfish@18.0.5
+- Configured Vitest v4.0.18 with jsdom, React Testing Library, @testing-library/jest-dom
+- Created complete directory structure per architecture spec
+- Defined all TypeScript types (GameState, MoveRecord, ClassifiedMove, GameResult, Settings, CompletedGame)
+- Created .env.example and .env with Stockfish tuning variables
+- Added Poppins font via Google Fonts, configured dark sable theme
+- Created 12 placeholder chess piece SVGs in public/pieces/
+- Created public/icons/ directory
+- Smoke test passes, production build succeeds
+
+### Change Log
+
+- 2026-03-08: Story 1.1 implemented — full project foundation
+
 ### File List
+
+- index.html (modified — Poppins font, title)
+- package.json (modified — name, test script, dependencies)
+- vite.config.ts (modified — Tailwind plugin)
+- vitest.config.ts (new)
+- .gitignore (modified — added .env)
+- .env.example (new)
+- .env (new)
+- src/index.css (modified — Tailwind + dark theme)
+- src/App.tsx (modified — named export, minimal layout)
+- src/App.test.tsx (new — smoke test)
+- src/main.tsx (modified — named import)
+- src/test-setup.ts (new)
+- src/types/chess.ts (new — all types)
+- public/pieces/*.svg (12 new files)
+- public/icons/ (new directory)

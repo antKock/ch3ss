@@ -1,6 +1,6 @@
 # Story 1.8: Game Start & Instant Replay
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -21,43 +21,43 @@ So that I experience zero friction between games.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: App.tsx — game lifecycle orchestration (AC: #1, #2, #8)
-  - [ ] Create the root layout in `App.tsx`: Header + Board + MoveArrows + GameControls + EndGame + Settings
-  - [ ] On mount: check Zustand store for existing game state (persist rehydration)
-  - [ ] If no saved game or fresh install: call `startNewGame()` and trigger move generation
-  - [ ] If saved game exists: restore board, trigger move generation if player's turn
-  - [ ] No auth check, no onboarding — straight to board
-- [ ] Task 2: Create Header component (AC: #2)
-  - [ ] Create `src/components/Header/Header.tsx`
-  - [ ] App title "ch3ss" with Poppins font
-  - [ ] Gear icon for settings (settings drawer is Epic 2, but icon placeholder needed)
-  - [ ] Minimal, clean header — not distracting from the board
-- [ ] Task 3: startNewGame store action (AC: #4, #5, #6)
-  - [ ] Implement `startNewGame()` in game-store.ts
-  - [ ] Reset FEN to starting position: `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1`
-  - [ ] Clear `moveHistory`, set `gamePhase: 'playing'`, clear `result`
-  - [ ] Set `playerColor: 'w'`
-  - [ ] Clear `currentMoves`
-  - [ ] Persist immediately (Zustand auto-persists on state change)
-- [ ] Task 4: New Game button in EndGame overlay (AC: #4, #5)
-  - [ ] Wire "New Game" button in EndGame.tsx to `startNewGame()` action
-  - [ ] After `startNewGame`, trigger new move generation via `useStockfish`
-  - [ ] Transition should feel instant — no loading screen between games
-- [ ] Task 5: Initial move generation on app load (AC: #7)
-  - [ ] After engine initializes, generate 3 moves for current position
-  - [ ] Handle the race: engine might not be ready when board renders — show board without arrows, add arrows when ready
-  - [ ] Engine loading indicator: subtle (e.g., pulsing dot), not blocking board render
-- [ ] Task 6: Performance optimization (AC: #3)
-  - [ ] Ensure Stockfish WASM loads asynchronously (already in Story 1.2)
-  - [ ] Board renders immediately, arrows appear after engine ready
-  - [ ] No heavy computation on main thread during initial render
-  - [ ] Verify initial load < 3s with Lighthouse or manual measurement
-- [ ] Task 7: Write tests (AC: all)
-  - [ ] Test: App renders board on mount
-  - [ ] Test: startNewGame resets state correctly
-  - [ ] Test: New Game button triggers startNewGame
-  - [ ] Test: move generation triggers after game start
-  - [ ] Test: Header renders with title
+- [x] Task 1: App.tsx — game lifecycle orchestration (AC: #1, #2, #8)
+  - [x] Create the root layout in `App.tsx`: Header + Board + MoveArrows + GameControls + EndGame + Settings
+  - [x] On mount: check Zustand store for existing game state (persist rehydration)
+  - [x] If no saved game or fresh install: call `startNewGame()` and trigger move generation
+  - [x] If saved game exists: restore board, trigger move generation if player's turn
+  - [x] No auth check, no onboarding — straight to board
+- [x] Task 2: Create Header component (AC: #2)
+  - [x] Create `src/components/Header/Header.tsx`
+  - [x] App title "ch3ss" with Poppins font
+  - [x] Gear icon for settings (settings drawer is Epic 2, but icon placeholder needed)
+  - [x] Minimal, clean header — not distracting from the board
+- [x] Task 3: startNewGame store action (AC: #4, #5, #6)
+  - [x] Implement `startNewGame()` in game-store.ts
+  - [x] Reset FEN to starting position: `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1`
+  - [x] Clear `moveHistory`, set `gamePhase: 'playing'`, clear `result`
+  - [x] Set `playerColor: 'w'`
+  - [x] Clear `currentMoves`
+  - [x] Persist immediately (Zustand auto-persists on state change)
+- [x] Task 4: New Game button in EndGame overlay (AC: #4, #5)
+  - [x] Wire "New Game" button in EndGame.tsx to `startNewGame()` action
+  - [x] After `startNewGame`, trigger new move generation via `useStockfish`
+  - [x] Transition should feel instant — no loading screen between games
+- [x] Task 5: Initial move generation on app load (AC: #7)
+  - [x] After engine initializes, generate 3 moves for current position
+  - [x] Handle the race: engine might not be ready when board renders — show board without arrows, add arrows when ready
+  - [x] Engine loading indicator: subtle (e.g., pulsing dot), not blocking board render
+- [x] Task 6: Performance optimization (AC: #3)
+  - [x] Ensure Stockfish WASM loads asynchronously (already in Story 1.2)
+  - [x] Board renders immediately, arrows appear after engine ready
+  - [x] No heavy computation on main thread during initial render
+  - [x] Verify initial load < 3s with Lighthouse or manual measurement
+- [x] Task 7: Write tests (AC: all)
+  - [x] Test: App renders board on mount
+  - [x] Test: startNewGame resets state correctly
+  - [x] Test: New Game button triggers startNewGame
+  - [x] Test: move generation triggers after game start
+  - [x] Test: Header renders with title
 
 ## Dev Notes
 
@@ -167,8 +167,26 @@ Per architecture spec, if localStorage data is corrupted:
 
 ### Agent Model Used
 
-### Debug Log References
+Claude Opus 4.6
 
 ### Completion Notes List
 
+- Created Header component with app title and settings gear icon
+- Rewrote App.tsx with ErrorBoundary, full game lifecycle orchestration
+- App handles initial move generation on engine ready, move selection with promotion detection, AI thinking indicator
+- startNewGame already implemented in game-store.ts (Story 1.5)
+- EndGame New Game button wired to startNewGame + move regeneration
+- 7 tests (5 App + 2 Header) all passing, 55 total tests passing
+- Fixed unused gamePhase variable in useStockfish.ts (TS6133)
+
+### Change Log
+
+- 2026-03-08: Story 1.8 implemented — Game start & instant replay integration
+
 ### File List
+
+- src/components/Header/Header.tsx (new)
+- src/components/Header/Header.test.tsx (new)
+- src/App.tsx (modified — full lifecycle orchestration with ErrorBoundary)
+- src/App.test.tsx (modified — 5 tests with engine mock)
+- src/hooks/useStockfish.ts (modified — removed unused gamePhase selector)

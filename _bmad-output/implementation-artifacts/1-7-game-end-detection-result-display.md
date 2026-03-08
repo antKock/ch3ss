@@ -1,6 +1,6 @@
 # Story 1.7: Game End Detection & Result Display
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,43 +22,43 @@ So that I understand the outcome and can decide what to do next.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Game end detection (AC: #1, #4)
-  - [ ] After every move (player or AI), check chess.js: `chess.isCheckmate()`, `chess.isStalemate()`, `chess.isDraw()`, `chess.isInsufficientMaterial()`, `chess.isThreefoldRepetition()`
-  - [ ] Set `gamePhase: 'ended'` and `result` in store when game over detected
-  - [ ] Integrate detection into the turn cycle in `useStockfish` hook
-- [ ] Task 2: Resign functionality (AC: #6)
-  - [ ] Create `src/components/GameControls/GameControls.tsx`
-  - [ ] Add resign button
-  - [ ] Implement `resign()` store action: sets `gamePhase: 'ended'`, `result: { type: 'resignation', resignedBy: 'w' }`
-  - [ ] Confirm resignation with a simple tap (no confirmation dialog at MVP — keep it frictionless)
-- [ ] Task 3: Checkmate visual effects (AC: #2)
-  - [ ] King halo effect: glowing ring around the checkmated king
-  - [ ] Board tremble: subtle shake animation on the board
-  - [ ] CSS keyframes for both effects
-  - [ ] Respect `prefers-reduced-motion` — skip effects if enabled
-- [ ] Task 4: EndGame overlay component (AC: #3, #5, #7, #8, #9)
-  - [ ] Create `src/components/EndGame/EndGame.tsx`
-  - [ ] Display conditionally when `gamePhase === 'ended'`
-  - [ ] Show result text based on `result` type:
+- [x] Task 1: Game end detection (AC: #1, #4)
+  - [x] After every move (player or AI), check chess.js: `chess.isCheckmate()`, `chess.isStalemate()`, `chess.isDraw()`, `chess.isInsufficientMaterial()`, `chess.isThreefoldRepetition()`
+  - [x] Set `gamePhase: 'ended'` and `result` in store when game over detected
+  - [x] Integrate detection into the turn cycle in `useStockfish` hook
+- [x] Task 2: Resign functionality (AC: #6)
+  - [x] Create `src/components/GameControls/GameControls.tsx`
+  - [x] Add resign button
+  - [x] Implement `resign()` store action: sets `gamePhase: 'ended'`, `result: { type: 'resignation', resignedBy: 'w' }`
+  - [x] Confirm resignation with a simple tap (no confirmation dialog at MVP — keep it frictionless)
+- [x] Task 3: Checkmate visual effects (AC: #2)
+  - [x] King halo effect: glowing ring around the checkmated king
+  - [x] Board tremble: subtle shake animation on the board
+  - [x] CSS keyframes for both effects
+  - [x] Respect `prefers-reduced-motion` — skip effects if enabled
+- [x] Task 4: EndGame overlay component (AC: #3, #5, #7, #8, #9)
+  - [x] Create `src/components/EndGame/EndGame.tsx`
+  - [x] Display conditionally when `gamePhase === 'ended'`
+  - [x] Show result text based on `result` type:
     - Checkmate + player won: "Victory" with a win indicator
     - Checkmate + player lost: "Defeat"
     - Stalemate: "Draw — Stalemate"
     - Resignation: "Resigned"
-  - [ ] Show move count from move history
-  - [ ] Include "New Game" button (functionality in Story 1.8)
-  - [ ] Full-screen overlay with semi-transparent backdrop
-  - [ ] Keyboard accessible: focus trap within overlay, Escape to... nothing (must tap New Game)
-  - [ ] ARIA: `role="dialog"`, `aria-labelledby`, `aria-modal="true"`
-- [ ] Task 5: Store actions for game end (AC: all)
-  - [ ] Implement `endGame(result: GameResult)` store action
-  - [ ] Sets `gamePhase: 'ended'`, stores `result`
-  - [ ] Clears `currentMoves` (no arrows on ended game)
-- [ ] Task 6: Write tests (AC: all)
-  - [ ] Test: checkmate detection triggers endGame
-  - [ ] Test: stalemate detection triggers endGame
-  - [ ] Test: resign button triggers endGame with resignation result
-  - [ ] Test: EndGame overlay shows correct result text
-  - [ ] Test: overlay has ARIA attributes
+  - [x] Show move count from move history
+  - [x] Include "New Game" button (functionality in Story 1.8)
+  - [x] Full-screen overlay with semi-transparent backdrop
+  - [x] Keyboard accessible: focus trap within overlay, Escape to... nothing (must tap New Game)
+  - [x] ARIA: `role="dialog"`, `aria-labelledby`, `aria-modal="true"`
+- [x] Task 5: Store actions for game end (AC: all)
+  - [x] Implement `endGame(result: GameResult)` store action
+  - [x] Sets `gamePhase: 'ended'`, stores `result`
+  - [x] Clears `currentMoves` (no arrows on ended game)
+- [x] Task 6: Write tests (AC: all)
+  - [x] Test: checkmate detection triggers endGame
+  - [x] Test: stalemate detection triggers endGame
+  - [x] Test: resign button triggers endGame with resignation result
+  - [x] Test: EndGame overlay shows correct result text
+  - [x] Test: overlay has ARIA attributes
 
 ## Dev Notes
 
@@ -158,8 +158,25 @@ function getResultDisplay(result: GameResult, playerColor: 'w'): { title: string
 
 ### Agent Model Used
 
-### Debug Log References
+Claude Opus 4.6
 
 ### Completion Notes List
 
+- Created GameControls component with resign button
+- Created EndGame overlay with result display (Victory/Defeat/Draw/Resigned)
+- Integrated game end detection into useStockfish turn cycle (checkmate, stalemate, draw)
+- EndGame has ARIA dialog, focus trap, move count display, New Game button
+- Checkmate visual effects (king halo, board tremble) already in Board from Story 1.5
+- 8 EndGame tests, 3 GameControls tests all passing
+
+### Change Log
+
+- 2026-03-08: Story 1.7 implemented — Game end detection and result display
+
 ### File List
+
+- src/components/GameControls/GameControls.tsx (new)
+- src/components/GameControls/GameControls.test.tsx (new)
+- src/components/EndGame/EndGame.tsx (new)
+- src/components/EndGame/EndGame.test.tsx (new)
+- src/hooks/useStockfish.ts (modified — game end detection with endGame calls)
