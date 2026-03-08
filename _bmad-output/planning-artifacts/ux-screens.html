@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ch3ss — Ecrans</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 48px; }
+  body { font-family: 'Poppins', sans-serif; background: #f0efe8; }
+
+  .sticky-nav {
+    position: sticky; top: 0; z-index: 100; background: #f0efe8;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    display: flex; justify-content: center; gap: 4px; padding: 8px 12px; flex-wrap: wrap;
+  }
+  .sticky-nav a {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    color: #8A8078; text-decoration: none; padding: 5px 10px; border-radius: 8px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .sticky-nav a:hover { background: rgba(0,0,0,0.06); color: #3D3A36; }
+
+  .section-title {
+    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;
+    color: #8A8078; text-align: center; padding: 32px 0 8px;
+    border-top: 1px solid rgba(0,0,0,0.08); margin: 0 40px;
+  }
+  .section-title:first-of-type { border-top: none; }
+
+  .phones-row {
+    display: flex; justify-content: center; gap: 24px; padding: 16px 16px 40px;
+    flex-wrap: wrap; align-items: flex-start;
+  }
+  .phone-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .phone-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #8A8078; }
+  .phone-frame {
+    border-radius: 36px; padding: 44px 0 20px; width: 300px;
+    overflow: hidden; position: relative; min-height: 640px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12), inset 0 0 0 1px rgba(0,0,0,0.06);
+  }
+  .phone-inner { padding: 0 13px; }
+  .status-bar { display: flex; justify-content: space-between; padding: 3px 13px 5px; font-size: 9px; font-weight: 700; opacity: 0.4; }
+
+  /* Board */
+  .board { display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1;
+    border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+  .sq { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+  .sq-l { background: #E8F0E8; }
+  .sq-d { background: #B8D0B4; }
+  .pc { width: 88%; height: 88%; object-fit: contain; pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18)) brightness(1.1);
+    position: relative; z-index: 2; }
+  .arrow-svg { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+
+  /* Arrow animations */
+  @keyframes arrow-appear {
+    0%   { opacity: 0; transform: scale(0.85); }
+    70%  { opacity: 1; transform: scale(1.03); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes arrow-dismiss-chosen {
+    0%   { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes arrow-dismiss-other {
+    0%   { opacity: 1; transform: scale(1) translate(0, 0); }
+    100% { opacity: 0; transform: scale(0.9); }
+  }
+  @keyframes arrow-shake {
+    0%, 100% { transform: translateX(0); }
+    20%  { transform: translateX(-3px); }
+    40%  { transform: translateX(3px); }
+    60%  { transform: translateX(-3px); }
+    80%  { transform: translateX(2px); }
+  }
+  @keyframes arrow-pulse {
+    0%, 100% { opacity: 1; }
+    50%  { opacity: 0.5; }
+  }
+
+  /* Toast */
+  .toast {
+    border-radius: 18px; padding: 14px 16px; position: relative;
+    background: #ffffff; box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  }
+  @keyframes toast-enter {
+    0%   { opacity: 0; transform: translateY(12px); }
+    60%  { opacity: 1; transform: translateY(-2px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .toast-anim { animation: toast-enter 350ms ease-out; }
+
+  /* Cooldown ring */
+  .cooldown-ring { position: absolute; inset: -1px; pointer-events: none; z-index: 1; overflow: visible; }
+  .cooldown-ring path {
+    fill: none; stroke-width: 2.5; stroke-linecap: round;
+    animation: cooldown-stroke 1.2s linear forwards;
+  }
+  @keyframes cooldown-stroke {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: var(--perim); }
+  }
+
+  /* Progress bars for recap */
+  .bar-track { width: 100%; height: 6px; border-radius: 3px; position: relative; }
+  .bar-fill { height: 100%; border-radius: 3px; position: absolute; left: 0; top: 0; }
+</style>
+</head>
+<body>
+
+<nav class="sticky-nav">
+  <a href="#s-home">Accueil</a>
+  <a href="#s-game">Jeu</a>
+  <a href="#s-undo">Annulation</a>
+  <a href="#s-opp">Adversaire</a>
+  <a href="#s-endgame">Fin de partie</a>
+  <a href="#s-anim">Animations</a>
+</nav>
+
+<div id="screens"></div>
+
+<script>
+const BASE = 'https://cdn.jsdelivr.net/gh/lichess-org/lila@master/public/piece/staunty';
+const C = {
+  bg: '#F8F6F1',
+  surface: '#ffffff',
+  text: '#3D3A36',
+  textSec: '#8A8078',
+  border: 'rgba(0,0,0,0.06)',
+  accent: '#6A8060',
+  boardL: '#E8F0E8',
+  boardD: '#B8D0B4',
+  arrow: ['#3A70B0','#B8860B','#8D5AA5'],
+  opponentTint: '#8A8078',
+};
+
+const pos = [
+  ['bR','','bB','bQ','bK','bB','','bR'],
+  ['bP','bP','bP','','','bP','bP','bP'],
+  ['','','bN','','','bN','',''],
+  ['','','','bP','bP','','',''],
+  ['','','','wP','wP','','',''],
+  ['','','wN','','','wN','',''],
+  ['wP','wP','wP','','','wP','wP','wP'],
+  ['wR','','wB','wQ','wK','wB','','wR'],
+];
+
+const moves = [
+  { sr:5,sc:2, dr:3,dd:3 },
+  { sr:7,sc:3, dr:5,dd:3 },
+  { sr:5,sc:5, dr:4,dd:7 },
+];
+
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  return [parseInt(h.substring(0,2),16), parseInt(h.substring(2,4),16), parseInt(h.substring(4,6),16)].join(',');
+}
+
+function mixColors(hexBase, hexOverlay, alpha) {
+  const b = hexToRgb(hexBase).split(',').map(Number);
+  const o = hexToRgb(hexOverlay).split(',').map(Number);
+  const r = Math.round(b[0]*(1-alpha)+o[0]*alpha);
+  const g = Math.round(b[1]*(1-alpha)+o[1]*alpha);
+  const bl = Math.round(b[2]*(1-alpha)+o[2]*alpha);
+  return `rgb(${r},${g},${bl})`;
+}
+
+function statusBar(color) {
+  return `<div class="status-bar" style="color:${color}"><span>9:41</span><span>●●●● 5G 🔋</span></div>`;
+}
+
+function boardHTML(id, withArrows = true) {
+  let html = '';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const light = (r+c)%2===0;
+      let bg = light ? C.boardL : C.boardD;
+      // Tint for arrow squares — opaque mix so dark bg doesn't bleed through
+      if (withArrows) {
+        for (let i = 0; i < moves.length; i++) {
+          const m = moves[i];
+          if ((r === m.sr && c === m.sc) || (r === m.dr && c === m.dd)) {
+            bg = mixColors(bg, C.arrow[i], 0.45);
+          }
+        }
+      }
+      const piece = pos[r][c];
+      const img = piece ? `<img class="pc" src="${BASE}/${piece}.svg" draggable="false">` : '';
+      html += `<div class="sq" style="background:${bg}">${img}</div>`;
+    }
+  }
+  return html;
+}
+
+function isKnightMove(m) {
+  const dr = Math.abs(m.dr - m.sr), dc = Math.abs(m.dd - m.sc);
+  return (dr === 2 && dc === 1) || (dr === 1 && dc === 2);
+}
+
+function arrowsSVG() {
+  const SZ = 100;
+  const STROKE = 22;
+  const HEAD_HALF_W = 28;
+  const HEAD_LEN = 40;
+  let paths = '';
+
+  moves.forEach((m, i) => {
+    const cx1 = m.sc*SZ+SZ/2, cy1 = m.sr*SZ+SZ/2;
+    const cx2 = m.dd*SZ+SZ/2, cy2 = m.dr*SZ+SZ/2;
+    let shaft, hbx, hby, htx, hty, dx, dy;
+
+    if (!isKnightMove(m)) {
+      const ddx = cx2-cx1, ddy = cy2-cy1;
+      const len = Math.sqrt(ddx*ddx+ddy*ddy);
+      const ux = ddx/len, uy = ddy/len;
+      const sx = cx1+ux*44, sy = cy1+uy*44;
+      hbx = cx2-ux*HEAD_LEN; hby = cy2-uy*HEAD_LEN;
+      htx = cx2-ux*8; hty = cy2-uy*8;
+      shaft = `M${sx},${sy} L${hbx},${hby}`;
+      dx = ux; dy = uy;
+    } else {
+      const dr = Math.abs(m.dr-m.sr), dc = Math.abs(m.dd-m.sc);
+      const R = 28;
+      if (dr > dc) {
+        const mx = cx1, my = cy2;
+        const dirV = cy2>cy1?1:-1, dirH = cx2>cx1?1:-1;
+        const sy = cy1+44*dirV;
+        const cornerY = my-R*dirV, cornerX = mx+R*dirH;
+        hbx = cx2-HEAD_LEN*dirH; hby = my; htx = cx2-8*dirH; hty = my;
+        shaft = `M${mx},${sy} L${mx},${cornerY} Q${mx},${my} ${cornerX},${my} L${hbx},${my}`;
+        dx = dirH; dy = 0;
+      } else {
+        const mx = cx2, my = cy1;
+        const dirH = cx2>cx1?1:-1, dirV = cy2>cy1?1:-1;
+        const sx = cx1+44*dirH;
+        const cornerX = mx-R*dirH, cornerY = my+R*dirV;
+        hbx = mx; hby = cy2-HEAD_LEN*dirV; htx = mx; hty = cy2-8*dirV;
+        shaft = `M${sx},${my} L${cornerX},${my} Q${mx},${my} ${mx},${cornerY} L${mx},${hby}`;
+        dx = 0; dy = dirV;
+      }
+    }
+
+    const px = -dy, py = dx;
+    const lx = hbx+px*HEAD_HALF_W, ly = hby+py*HEAD_HALF_W;
+    const rx = hbx-px*HEAD_HALF_W, ry = hby-py*HEAD_HALF_W;
+    const r = 0.22;
+    const lmx=lx+(htx-lx)*r, lmy=ly+(hty-ly)*r;
+    const rmx=rx+(htx-rx)*r, rmy=ry+(hty-ry)*r;
+    const blx=lx+(rx-lx)*r, bly=ly+(ry-ly)*r;
+    const brx=rx+(lx-rx)*r, bry=ry+(ly-ry)*r;
+    const tlx=htx+(lx-htx)*r, tly=hty+(ly-hty)*r;
+    const trx=htx+(rx-htx)*r, try_=hty+(ry-hty)*r;
+
+    paths += `<path d="${shaft}" stroke="${C.arrow[i]}" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+    paths += `<path d="M${blx},${bly} Q${lx},${ly} ${lmx},${lmy} L${tlx},${tly} Q${htx},${hty} ${trx},${try_} L${rmx},${rmy} Q${rx},${ry} ${brx},${bry} Z" fill="${C.arrow[i]}"/>`;
+  });
+
+  return `<svg class="arrow-svg" viewBox="0 0 800 800">${paths}</svg>`;
+}
+
+function phone(label, bg, content) {
+  return `<div class="phone-col">
+    <div class="phone-label">${label}</div>
+    <div class="phone-frame" style="background:${bg}">
+      ${statusBar(C.text)}
+      <div class="phone-inner">${content}</div>
+    </div>
+  </div>`;
+}
+
+// ===================== ECRAN ACCUEIL =====================
+
+function miniArrowSVG() {
+  // 3 arrows on 4x4 mini board (viewBox 0 0 400 400, each cell = 100px)
+  // Same style as game arrows: rounded heads, L-shaped knight move for arrow[2]
+  const SZ = 100, STROKE = 22, HEAD_HALF_W = 28, HEAD_LEN = 38, r = 0.22;
+  const miniMoves = [
+    { sr:3,sc:1, dr:1,dd:1, color:C.arrow[0] }, // straight up
+    { sr:3,sc:2, dr:2,dd:2, color:C.arrow[1] }, // short up
+    { sr:2,sc:3, dr:0,dd:2, color:C.arrow[2] }, // knight L-shape (2 up, 1 left)
+  ];
+  let paths = '';
+  miniMoves.forEach(m => {
+    const cx1=m.sc*SZ+SZ/2, cy1=m.sr*SZ+SZ/2;
+    const cx2=m.dd*SZ+SZ/2, cy2=m.dr*SZ+SZ/2;
+    let shaft, hbx, hby, htx, hty, dx, dy;
+    const adr=Math.abs(m.dr-m.sr), adc=Math.abs(m.dd-m.sc);
+    const isKnight = (adr===2&&adc===1)||(adr===1&&adc===2);
+
+    if (!isKnight) {
+      const ddx=cx2-cx1, ddy=cy2-cy1, len=Math.sqrt(ddx*ddx+ddy*ddy);
+      const ux=ddx/len, uy=ddy/len;
+      shaft=`M${cx1+ux*30},${cy1+uy*30} L${cx2-ux*HEAD_LEN},${cy2-uy*HEAD_LEN}`;
+      hbx=cx2-ux*HEAD_LEN; hby=cy2-uy*HEAD_LEN; htx=cx2-ux*5; hty=cy2-uy*5; dx=ux; dy=uy;
+    } else {
+      const R=18;
+      if (adr>adc) {
+        const mx=cx1,my=cy2, dirV=cy2>cy1?1:-1, dirH=cx2>cx1?1:-1;
+        shaft=`M${mx},${cy1+30*dirV} L${mx},${my-R*dirV} Q${mx},${my} ${mx+R*dirH},${my} L${cx2-HEAD_LEN*dirH},${my}`;
+        hbx=cx2-HEAD_LEN*dirH;hby=my;htx=cx2-5*dirH;hty=my;dx=dirH;dy=0;
+      } else {
+        const mx=cx2,my=cy1, dirH=cx2>cx1?1:-1, dirV=cy2>cy1?1:-1;
+        shaft=`M${cx1+30*dirH},${my} L${mx-R*dirH},${my} Q${mx},${my} ${mx},${my+R*dirV} L${mx},${cy2-HEAD_LEN*dirV}`;
+        hbx=mx;hby=cy2-HEAD_LEN*dirV;htx=mx;hty=cy2-5*dirV;dx=0;dy=dirV;
+      }
+    }
+    const px=-dy, py=dx;
+    const lx=hbx+px*HEAD_HALF_W,ly=hby+py*HEAD_HALF_W,rx=hbx-px*HEAD_HALF_W,ry=hby-py*HEAD_HALF_W;
+    const lmx=lx+(htx-lx)*r,lmy=ly+(hty-ly)*r,rmx=rx+(htx-rx)*r,rmy=ry+(hty-ry)*r;
+    const blx=lx+(rx-lx)*r,bly=ly+(ry-ly)*r,brx=rx+(lx-rx)*r,bry=ry+(ly-ry)*r;
+    const tlx=htx+(lx-htx)*r,tly=hty+(ly-hty)*r,trx=htx+(rx-htx)*r,try_=hty+(ry-hty)*r;
+
+    paths+=`<path d="${shaft}" stroke="${m.color}" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`;
+    paths+=`<path d="M${blx},${bly} Q${lx},${ly} ${lmx},${lmy} L${tlx},${tly} Q${htx},${hty} ${trx},${try_} L${rmx},${rmy} Q${rx},${ry} ${brx},${bry} Z" fill="${m.color}"/>`;
+  });
+  return `<svg viewBox="0 0 400 400" style="position:absolute;inset:0;z-index:1">${paths}</svg>`;
+}
+
+function homeScreen(variant) {
+  const v = variant || { text: C.text, textSec: C.textSec };
+  return `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:480px;gap:24px">
+      <!-- Logo -->
+      <div style="text-align:center">
+        <div style="font-size:42px;font-weight:800;color:${v.text};letter-spacing:-2px">ch<span style="color:${C.accent}">3</span>ss</div>
+        <div style="font-size:13px;font-weight:500;color:${v.textSec};margin-top:2px">3 options, ton choix</div>
+      </div>
+
+      <!-- Mini board with 3 arrows -->
+      <div style="width:140px;height:140px;border-radius:14px;overflow:hidden;position:relative;box-shadow:0 4px 16px rgba(0,0,0,0.08)">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);width:100%;height:100%">
+          ${Array.from({length:16}, (_,i) => {
+            const r = Math.floor(i/4), c = i%4;
+            const bg = (r+c)%2===0 ? C.boardL : C.boardD;
+            return `<div style="background:${bg}"></div>`;
+          }).join('')}
+        </div>
+        ${miniArrowSVG()}
+      </div>
+
+      <!-- Play button -->
+      <button style="
+        font-family:'Poppins',sans-serif; font-size:16px; font-weight:600; color:#fff;
+        background:${C.accent}; border:none; border-radius:14px;
+        padding:14px 56px; cursor:pointer;
+        box-shadow:0 4px 16px rgba(106,128,96,0.3);
+      ">Jouer</button>
+
+      <!-- Subtle stats -->
+      <div style="font-size:11px;font-weight:500;color:${v.textSec}">12 parties jouees</div>
+    </div>
+  `;
+}
+
+// ===================== ECRAN DE JEU =====================
+
+function capturedRow(pieces, align, isDark) {
+  const imgs = pieces.map(p => {
+    const isBlackPiece = p.startsWith('b');
+    const filter = isDark && isBlackPiece
+      ? 'brightness(1.6) drop-shadow(0 0 2px rgba(255,255,255,0.3))'
+      : 'brightness(1.1) drop-shadow(0 0 1px rgba(0,0,0,0.15))';
+    return `<img src="${BASE}/${p}.svg" style="width:18px;height:18px;filter:${filter};opacity:0.7" draggable="false">`;
+  }).join('');
+  return `<div style="display:flex;gap:2px;align-items:center;min-height:22px;justify-content:${align};padding:0 2px">${imgs}</div>`;
+}
+
+function appHeader(textColor, isDark) {
+  const tc = textColor || C.text;
+  const icon = isDark
+    ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${tc}" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
+    : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${tc}" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+  return `<div style="display:flex;align-items:center;justify-content:center;padding:4px 0 0;position:relative">
+    <span style="font-size:20px;font-weight:800;color:${tc};letter-spacing:-1px">ch<span style="color:${C.accent}">3</span>ss</span>
+    <div style="position:absolute;right:0;opacity:0.5;cursor:pointer;padding:4px">${icon}</div>
+  </div>`;
+}
+
+const bgVariants = {
+  sable:   { bg:'#EDE8DF', text:'#3D3A36', textSec:'#8A8078', label:'Sable' },
+  foret:   { bg:'#1E2A22', text:'#E0DDD6', textSec:'#8A9A86', label:'Foret' },
+};
+
+function gameScreen(variant) {
+  const v = variant || { text: C.text, textSec: C.textSec };
+  const isDark = v.bg && parseInt(v.bg.slice(1,3),16) < 80;
+  return `
+    <div style="display:flex;flex-direction:column;height:100%;min-height:560px">
+      <!-- App header -->
+      ${appHeader(v.text, isDark)}
+
+      <!-- Top spacer pushes board to center -->
+      <div style="flex:1"></div>
+
+      <!-- Adversaire captured pieces -->
+      ${capturedRow(['wP','wP','wN'], 'flex-start', isDark)}
+
+      <!-- Board centered -->
+      <div style="position:relative">
+        <div class="board">${boardHTML('game', true)}</div>
+        ${arrowsSVG()}
+      </div>
+
+      <!-- Player captured pieces -->
+      ${capturedRow(['bP'], 'flex-start', isDark)}
+
+      <!-- Bottom spacer -->
+      <div style="flex:1"></div>
+
+      <!-- Abandon pinned to bottom -->
+      <div style="display:flex;justify-content:center;padding-bottom:8px">
+        <button style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:500;color:${v.textSec};background:none;border:none;cursor:pointer;padding:6px 16px;opacity:0.5">Abandonner</button>
+      </div>
+    </div>
+  `;
+}
+
+// Board after player move (tinted squares, no arrow) + opponent response
+function boardAfterMove(chosenIdx, showOpponent) {
+  const m = moves[chosenIdx];
+  const postPos = pos.map(r => [...r]);
+  // Player move
+  postPos[m.dr][m.dd] = postPos[m.sr][m.sc];
+  postPos[m.sr][m.sc] = '';
+  // Opponent response: bP d5→d4 (row 3 col 3 → row 4 col 3)
+  const opp = showOpponent ? { sr:3, sc:3, dr:4, dd:3 } : null;
+  if (opp) {
+    postPos[opp.dr][opp.dd] = postPos[opp.sr][opp.sc];
+    postPos[opp.sr][opp.sc] = '';
+  }
+
+  let html = '';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const light = (r+c)%2===0;
+      let bg = light ? C.boardL : C.boardD;
+      // Player move tint (hidden when opponent response is shown)
+      if (!showOpponent && ((r === m.sr && c === m.sc) || (r === m.dr && c === m.dd))) {
+        bg = mixColors(bg, C.arrow[chosenIdx], 0.45);
+      }
+      // Opponent move tint (neutral color)
+      if (opp && ((r === opp.sr && c === opp.sc) || (r === opp.dr && c === opp.dd))) {
+        bg = mixColors(bg, C.opponentTint, 0.35);
+      }
+      const piece = postPos[r][c];
+      const img = piece ? `<img class="pc" src="${BASE}/${piece}.svg" draggable="false">` : '';
+      html += `<div class="sq" style="background:${bg}">${img}</div>`;
+    }
+  }
+  return html;
+}
+
+function singleArrowSVG(chosenIdx) {
+  const m = moves[chosenIdx];
+  const SZ = 100, STROKE = 22, HEAD_HALF_W = 28, HEAD_LEN = 40;
+  const cx1 = m.sc*SZ+SZ/2, cy1 = m.sr*SZ+SZ/2;
+  const cx2 = m.dd*SZ+SZ/2, cy2 = m.dr*SZ+SZ/2;
+  let shaft, hbx, hby, htx, hty, dx, dy;
+
+  if (!isKnightMove(m)) {
+    const ddx=cx2-cx1, ddy=cy2-cy1, len=Math.sqrt(ddx*ddx+ddy*ddy);
+    const ux=ddx/len, uy=ddy/len;
+    shaft = `M${cx1+ux*44},${cy1+uy*44} L${cx2-ux*HEAD_LEN},${cy2-uy*HEAD_LEN}`;
+    hbx=cx2-ux*HEAD_LEN; hby=cy2-uy*HEAD_LEN; htx=cx2-ux*8; hty=cy2-uy*8; dx=ux; dy=uy;
+  } else {
+    const dr=Math.abs(m.dr-m.sr), dc=Math.abs(m.dd-m.sc), R=28;
+    if (dr>dc) {
+      const mx=cx1,my=cy2, dirV=cy2>cy1?1:-1, dirH=cx2>cx1?1:-1;
+      shaft=`M${mx},${cy1+44*dirV} L${mx},${my-R*dirV} Q${mx},${my} ${mx+R*dirH},${my} L${cx2-HEAD_LEN*dirH},${my}`;
+      hbx=cx2-HEAD_LEN*dirH;hby=my;htx=cx2-8*dirH;hty=my;dx=dirH;dy=0;
+    } else {
+      const mx=cx2,my=cy1, dirH=cx2>cx1?1:-1, dirV=cy2>cy1?1:-1;
+      shaft=`M${cx1+44*dirH},${my} L${mx-R*dirH},${my} Q${mx},${my} ${mx},${my+R*dirV} L${mx},${cy2-HEAD_LEN*dirV}`;
+      hbx=mx;hby=cy2-HEAD_LEN*dirV;htx=mx;hty=cy2-8*dirV;dx=0;dy=dirV;
+    }
+  }
+  const px=-dy,py=dx,r=0.22,color=C.arrow[chosenIdx];
+  const lx=hbx+px*HEAD_HALF_W,ly=hby+py*HEAD_HALF_W,rx=hbx-px*HEAD_HALF_W,ry=hby-py*HEAD_HALF_W;
+  const lmx=lx+(htx-lx)*r,lmy=ly+(hty-ly)*r,rmx=rx+(htx-rx)*r,rmy=ry+(hty-ry)*r;
+  const blx=lx+(rx-lx)*r,bly=ly+(ry-ly)*r,brx=rx+(lx-rx)*r,bry=ry+(ly-ry)*r;
+  const tlx=htx+(lx-htx)*r,tly=hty+(ly-hty)*r,trx=htx+(rx-htx)*r,try_=hty+(ry-hty)*r;
+
+  return `<svg class="arrow-svg" viewBox="0 0 800 800" style="opacity:0.5">
+    <path d="${shaft}" stroke="${color}" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M${blx},${bly} Q${lx},${ly} ${lmx},${lmy} L${tlx},${tly} Q${htx},${hty} ${trx},${try_} L${rmx},${rmy} Q${rx},${ry} ${brx},${bry} Z" fill="${color}"/>
+  </svg>`;
+}
+
+// ===================== TOAST ANNULATION =====================
+
+function undoToast(variant) {
+  const v = variant || { text: C.text };
+  const isDark = v.bg && parseInt(v.bg.slice(1,3),16) < 80;
+  const toastBg = isDark ? '#2A3A2E' : '#ffffff';
+  const w = 274, h = 52, r = 18;
+  const perim = 2*(w-2*r) + 2*(h-2*r) + 2*Math.PI*r;
+  const path = `M${w/2},1 L${w-r},1 Q${w-1},1 ${w-1},${r} L${w-1},${h-r} Q${w-1},${h-1} ${w-r},${h-1} L${r},${h-1} Q1,${h-1} 1,${h-r} L1,${r} Q1,1 ${r},1 Z`;
+
+  return `
+    <div style="position:absolute;bottom:16px;left:13px;right:13px;z-index:20">
+      <div class="toast toast-anim" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:${toastBg}">
+        <svg class="cooldown-ring" style="--perim:${Math.round(perim)}" viewBox="0 0 ${w} ${h}">
+          <path d="${path}" stroke="${C.accent}" stroke-dasharray="${Math.round(perim)}" />
+        </svg>
+        <div style="font-size:13px;font-weight:600;color:${v.text};flex:1">Coup joué</div>
+        <button style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:${C.accent};background:rgba(106,128,96,0.1);border:none;border-radius:8px;padding:6px 14px;cursor:pointer">Annuler</button>
+      </div>
+    </div>
+  `;
+}
+
+// ===================== FIN DE PARTIE =====================
+
+function endgameScreen(result, variant) {
+  const v = variant || { text: C.text, textSec: C.textSec };
+  const isDark = v.bg && parseInt(v.bg.slice(1,3),16) < 80;
+  const surface = isDark ? '#2A3A2E' : '#ffffff';
+  const trackBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const cardShadow = isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 12px rgba(0,0,0,0.06)';
+  const statShadow = isDark ? '0 2px 8px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.04)';
+  const isWin = result === 'win';
+  const title = isWin ? 'Victoire' : 'Defaite';
+  const emoji = isWin ? '♔' : '♚';
+  const subtitle = isWin ? 'Echec et mat en 34 coups' : 'Mat en 28 coups';
+
+  const levels = [
+    { label:'Brillant',  desc:'Meilleur coup', color:C.arrow[0], pct: isWin ? 38 : 18 },
+    { label:'Solide',    desc:'Bon coup',      color:C.arrow[1], pct: isWin ? 41 : 47 },
+    { label:'Prudent',   desc:'Coup sur',      color:C.arrow[2], pct: isWin ? 21 : 35 },
+  ];
+
+  return `
+    <div style="display:flex;flex-direction:column;align-items:center;padding-top:40px;gap:20px">
+      <div style="text-align:center">
+        <div style="font-size:48px;line-height:1">${emoji}</div>
+        <div style="font-size:26px;font-weight:800;color:${v.text};margin-top:8px">${title}</div>
+        <div style="font-size:13px;font-weight:500;color:${v.textSec};margin-top:2px">${subtitle}</div>
+      </div>
+
+      <div style="background:${surface};border-radius:18px;padding:20px;width:100%;box-shadow:${cardShadow}">
+        <div style="font-size:12px;font-weight:700;color:${v.textSec};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px">Tes choix</div>
+        ${levels.map(l => recapBar(l.label, l.desc, l.color, l.pct, v, trackBg)).join('')}
+      </div>
+
+      <div style="display:flex;gap:12px;width:100%">
+        <div style="flex:1;background:${surface};border-radius:14px;padding:14px;text-align:center;box-shadow:${statShadow}">
+          <div style="font-size:22px;font-weight:800;color:${v.text}">34</div>
+          <div style="font-size:10px;font-weight:600;color:${v.textSec}">Coups</div>
+        </div>
+        <div style="flex:1;background:${surface};border-radius:14px;padding:14px;text-align:center;box-shadow:${statShadow}">
+          <div style="font-size:22px;font-weight:800;color:${v.text}">2:47</div>
+          <div style="font-size:10px;font-weight:600;color:${v.textSec}">Duree</div>
+        </div>
+        <div style="flex:1;background:${surface};border-radius:14px;padding:14px;text-align:center;box-shadow:${statShadow}">
+          <div style="font-size:22px;font-weight:800;color:${v.text}">${isWin ? '7' : '3'}</div>
+          <div style="font-size:10px;font-weight:600;color:${v.textSec}">Serie</div>
+        </div>
+      </div>
+
+      <button style="
+        font-family:'Poppins',sans-serif; font-size:16px; font-weight:600; color:#fff;
+        background:${C.accent}; border:none; border-radius:14px;
+        padding:14px 0; cursor:pointer; width:100%;
+        box-shadow:0 4px 16px rgba(106,128,96,0.3);
+        margin-top:4px;
+      ">Rejouer</button>
+
+      <button style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:500;color:${v.textSec};background:none;border:none;cursor:pointer;padding:8px">Accueil</button>
+    </div>
+  `;
+}
+
+function recapBar(label, desc, color, pct, v, trackBg) {
+  const vt = v || { text: C.text, textSec: C.textSec };
+  const tb = trackBg || 'rgba(0,0,0,0.06)';
+  return `
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${color}"></div>
+          <span style="font-size:13px;font-weight:700;color:${vt.text}">${label}</span>
+          <span style="font-size:10px;font-weight:500;color:${vt.textSec}">${desc}</span>
+        </div>
+        <span style="font-size:14px;font-weight:800;color:${color}">${pct}%</span>
+      </div>
+      <div class="bar-track" style="background:${tb}">
+        <div class="bar-fill" style="width:${pct}%;background:${color};opacity:0.7;border-radius:3px"></div>
+      </div>
+    </div>
+  `;
+}
+
+// ===================== INTERACTIVE ARROW DEMO =====================
+
+function arrowGroup(moveIdx) {
+  const m = moves[moveIdx];
+  const SZ = 100, STROKE = 22, HEAD_HALF_W = 28, HEAD_LEN = 40;
+  const cx1 = m.sc*SZ+SZ/2, cy1 = m.sr*SZ+SZ/2;
+  const cx2 = m.dd*SZ+SZ/2, cy2 = m.dr*SZ+SZ/2;
+  let shaft, hbx, hby, htx, hty, dx, dy;
+
+  if (!isKnightMove(m)) {
+    const ddx=cx2-cx1, ddy=cy2-cy1, len=Math.sqrt(ddx*ddx+ddy*ddy);
+    const ux=ddx/len, uy=ddy/len;
+    shaft=`M${cx1+ux*44},${cy1+uy*44} L${cx2-ux*HEAD_LEN},${cy2-uy*HEAD_LEN}`;
+    hbx=cx2-ux*HEAD_LEN; hby=cy2-uy*HEAD_LEN; htx=cx2-ux*8; hty=cy2-uy*8; dx=ux; dy=uy;
+  } else {
+    const dr=Math.abs(m.dr-m.sr), dc=Math.abs(m.dd-m.sc), R=28;
+    if (dr>dc) {
+      const mx=cx1,my=cy2, dirV=cy2>cy1?1:-1, dirH=cx2>cx1?1:-1;
+      shaft=`M${mx},${cy1+44*dirV} L${mx},${my-R*dirV} Q${mx},${my} ${mx+R*dirH},${my} L${cx2-HEAD_LEN*dirH},${my}`;
+      hbx=cx2-HEAD_LEN*dirH;hby=my;htx=cx2-8*dirH;hty=my;dx=dirH;dy=0;
+    } else {
+      const mx=cx2,my=cy1, dirH=cx2>cx1?1:-1, dirV=cy2>cy1?1:-1;
+      shaft=`M${cx1+44*dirH},${my} L${mx-R*dirH},${my} Q${mx},${my} ${mx},${my+R*dirV} L${mx},${cy2-HEAD_LEN*dirV}`;
+      hbx=mx;hby=cy2-HEAD_LEN*dirV;htx=mx;hty=cy2-8*dirV;dx=0;dy=dirV;
+    }
+  }
+  const px=-dy,py=dx, r=0.22, color=C.arrow[moveIdx];
+  const lx=hbx+px*HEAD_HALF_W,ly=hby+py*HEAD_HALF_W,rx=hbx-px*HEAD_HALF_W,ry=hby-py*HEAD_HALF_W;
+  const lmx=lx+(htx-lx)*r,lmy=ly+(hty-ly)*r,rmx=rx+(htx-rx)*r,rmy=ry+(hty-ry)*r;
+  const blx=lx+(rx-lx)*r,bly=ly+(ry-ly)*r,brx=rx+(lx-rx)*r,bry=ry+(ly-ry)*r;
+  const tlx=htx+(lx-htx)*r,tly=hty+(ly-hty)*r,trx=htx+(rx-htx)*r,try_=hty+(ry-hty)*r;
+
+  return `<g data-arrow="${moveIdx}" style="transform-origin:${(cx1+cx2)/2}px ${(cy1+cy2)/2}px">
+    <path d="${shaft}" stroke="${color}" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M${blx},${bly} Q${lx},${ly} ${lmx},${lmy} L${tlx},${tly} Q${htx},${hty} ${trx},${try_} L${rmx},${rmy} Q${rx},${ry} ${brx},${bry} Z" fill="${color}"/>
+  </g>`;
+}
+
+function interactiveGameScreen() {
+  const v = bgVariants.foret;
+  const isDark = true;
+  // Board WITHOUT tints — tints appear with arrows in playAppear()
+  let boardHtml = '';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const light = (r+c)%2===0;
+      const bg = light ? C.boardL : C.boardD;
+      const piece = pos[r][c];
+      const img = piece ? `<img class="pc" src="${BASE}/${piece}.svg" draggable="false">` : '';
+      boardHtml += `<div class="sq" data-r="${r}" data-c="${c}" style="background:${bg};cursor:pointer">${img}</div>`;
+    }
+  }
+
+  const arrowGroups = [0,1,2].map(i => arrowGroup(i)).join('');
+
+  return `
+    <div style="display:flex;flex-direction:column;height:100%;min-height:560px">
+      ${appHeader(v.text, isDark)}
+      <div style="flex:1"></div>
+      ${capturedRow(['wP','wP','wN'], 'flex-start', isDark)}
+      <div style="position:relative" id="anim-board-wrap">
+        <div class="board" id="anim-board" style="cursor:pointer">${boardHtml}</div>
+        <svg class="arrow-svg" id="anim-arrows" viewBox="0 0 800 800" style="pointer-events:none">${arrowGroups}</svg>
+      </div>
+      ${capturedRow(['bP'], 'flex-start', isDark)}
+      <div style="flex:1"></div>
+      <div style="display:flex;justify-content:center;gap:12px;padding-bottom:8px">
+        <button id="anim-reset-btn" style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;color:${C.accent};background:rgba(106,128,96,0.15);border:none;border-radius:8px;cursor:pointer;padding:6px 16px">Rejouer l'animation</button>
+      </div>
+    </div>
+  `;
+}
+
+function setupAnimDemo() {
+  const board = document.getElementById('anim-board');
+  const arrowsSvg = document.getElementById('anim-arrows');
+  const resetBtn = document.getElementById('anim-reset-btn');
+  if (!board || !arrowsSvg) return;
+
+  let state = 'idle'; // idle | showing | dismissed
+
+  function getArrowSquares() {
+    const squares = new Set();
+    moves.forEach((m, i) => {
+      squares.add(`${m.sr},${m.sc},${i}`);
+      squares.add(`${m.dr},${m.dd},${i}`);
+    });
+    return squares;
+  }
+
+  function findArrowForSquare(r, c) {
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
+      if ((r === m.sr && c === m.sc) || (r === m.dr && c === m.dd)) return i;
+    }
+    return -1;
+  }
+
+  function tintSquaresForArrow(arrowIdx) {
+    const m = moves[arrowIdx];
+    [{ r: m.sr, c: m.sc }, { r: m.dr, c: m.dd }].forEach(({ r, c }) => {
+      const sq = getSquare(r, c);
+      if (!sq) return;
+      const light = (r+c)%2===0;
+      const base = light ? C.boardL : C.boardD;
+      sq.style.transition = 'background 200ms ease-out';
+      sq.style.background = mixColors(base, C.arrow[arrowIdx], 0.45);
+    });
+  }
+
+  function untintSquaresForArrow(arrowIdx, duration) {
+    const m = moves[arrowIdx];
+    [{ r: m.sr, c: m.sc }, { r: m.dr, c: m.dd }].forEach(({ r, c }) => {
+      const sq = getSquare(r, c);
+      if (!sq) return;
+      const light = (r+c)%2===0;
+      sq.style.transition = `background ${duration}ms ease-out`;
+      sq.style.background = light ? C.boardL : C.boardD;
+    });
+  }
+
+  function clearAllTints() {
+    board.querySelectorAll('.sq').forEach(sq => {
+      const r = parseInt(sq.dataset.r), c = parseInt(sq.dataset.c);
+      const light = (r+c)%2===0;
+      sq.style.transition = 'none';
+      sq.style.background = light ? C.boardL : C.boardD;
+    });
+  }
+
+  function playAppear() {
+    state = 'showing';
+    clearAllTints();
+    const groups = arrowsSvg.querySelectorAll('g[data-arrow]');
+    // Randomize order
+    const order = [0,1,2].sort(() => Math.random() - 0.5);
+    groups.forEach(g => {
+      g.style.opacity = '0';
+      g.style.animation = 'none';
+    });
+    order.forEach((idx, seq) => {
+      const g = arrowsSvg.querySelector(`g[data-arrow="${idx}"]`);
+      setTimeout(() => {
+        g.style.animation = `arrow-appear 220ms ease-out forwards`;
+        tintSquaresForArrow(idx);
+      }, seq * 90);
+    });
+  }
+
+  function getSquare(r, c) {
+    return board.querySelector(`.sq[data-r="${r}"][data-c="${c}"]`);
+  }
+
+  function playDismiss(chosenIdx) {
+    if (state !== 'showing') return;
+    state = 'dismissed';
+    const m = moves[chosenIdx];
+
+    // 1. Dismiss arrows + untint non-chosen squares in sync
+    const groups = arrowsSvg.querySelectorAll('g[data-arrow]');
+    groups.forEach(g => {
+      const idx = parseInt(g.dataset.arrow);
+      g.style.animation = 'none';
+      g.offsetHeight;
+      if (idx === chosenIdx) {
+        g.style.animation = 'arrow-dismiss-chosen 150ms ease-out forwards';
+      } else {
+        g.style.animation = 'arrow-dismiss-other 220ms ease-out forwards';
+        untintSquaresForArrow(idx, 220);
+      }
+    });
+
+    // 2. Animate piece movement
+    const srcSq = getSquare(m.sr, m.sc);
+    const dstSq = getSquare(m.dr, m.dd);
+    const srcPc = srcSq.querySelector('.pc');
+    if (!srcPc) return;
+
+    const wrap = document.getElementById('anim-board-wrap');
+    const wrapRect = wrap.getBoundingClientRect();
+    const srcRect = srcSq.getBoundingClientRect();
+    const dstRect = dstSq.getBoundingClientRect();
+    const knight = isKnightMove(m);
+
+    // For knight: find the midpoint square (corner of the L)
+    let midRect = null;
+    if (knight) {
+      const dr = Math.abs(m.dr - m.sr), dc = Math.abs(m.dd - m.sc);
+      let midR, midC;
+      if (dr > dc) {
+        // Vertical first, then horizontal
+        midR = m.dr; midC = m.sc;
+      } else {
+        // Horizontal first, then vertical
+        midR = m.sr; midC = m.dd;
+      }
+      const midSq = getSquare(midR, midC);
+      midRect = midSq.getBoundingClientRect();
+    }
+
+    // Create flying piece clone
+    const flyPc = srcPc.cloneNode(true);
+    flyPc.style.position = 'absolute';
+    flyPc.style.width = srcRect.width * 0.88 + 'px';
+    flyPc.style.height = srcRect.height * 0.88 + 'px';
+    const offX = srcRect.width * 0.06;
+    const offY = srcRect.height * 0.06;
+    flyPc.style.left = (srcRect.left - wrapRect.left + offX) + 'px';
+    flyPc.style.top = (srcRect.top - wrapRect.top + offY) + 'px';
+    flyPc.style.zIndex = '10';
+    flyPc.style.pointerEvents = 'none';
+    wrap.appendChild(flyPc);
+
+    // Hide original piece
+    srcPc.style.opacity = '0';
+
+    // Fade out captured piece
+    const dstPc = dstSq.querySelector('.pc');
+    if (dstPc) {
+      dstPc.style.transition = 'opacity 150ms ease-out, transform 150ms ease-out';
+      dstPc.style.opacity = '0';
+      dstPc.style.transform = 'scale(0.7)';
+    }
+
+    const LEG_DUR = 120; // ms per leg
+
+    if (knight && midRect) {
+      // Leg 1: src → mid (corner of the L)
+      flyPc.style.transition = `left ${LEG_DUR}ms ease-in, top ${LEG_DUR}ms ease-in`;
+      requestAnimationFrame(() => {
+        flyPc.style.left = (midRect.left - wrapRect.left + offX) + 'px';
+        flyPc.style.top = (midRect.top - wrapRect.top + offY) + 'px';
+      });
+      // Leg 2: mid → dst
+      setTimeout(() => {
+        flyPc.style.transition = `left ${LEG_DUR}ms ease-out, top ${LEG_DUR}ms ease-out`;
+        flyPc.style.left = (dstRect.left - wrapRect.left + offX) + 'px';
+        flyPc.style.top = (dstRect.top - wrapRect.top + offY) + 'px';
+      }, LEG_DUR);
+    } else {
+      // Straight move
+      flyPc.style.transition = 'left 200ms ease-out, top 200ms ease-out';
+      requestAnimationFrame(() => {
+        flyPc.style.left = (dstRect.left - wrapRect.left + offX) + 'px';
+        flyPc.style.top = (dstRect.top - wrapRect.top + offY) + 'px';
+      });
+    }
+
+    const totalDur = knight ? LEG_DUR * 2 + 20 : 220;
+
+    // 3. After animation: update board state, then play opponent move
+    setTimeout(() => {
+      flyPc.remove();
+
+      // Remove captured piece from DOM
+      if (dstPc) dstPc.remove();
+
+      // Move piece img from src to dst
+      srcPc.style.opacity = '1';
+      dstSq.appendChild(srcPc);
+
+      // Update tinted squares (player move tint)
+      board.querySelectorAll('.sq').forEach(sq => {
+        const r = parseInt(sq.dataset.r), c = parseInt(sq.dataset.c);
+        if ((r === m.sr && c === m.sc) || (r === m.dr && c === m.dd)) {
+          const light = (r+c)%2===0;
+          const base = light ? C.boardL : C.boardD;
+          sq.style.transition = 'background 200ms ease-out';
+          sq.style.background = mixColors(base, C.arrow[chosenIdx], 0.45);
+        } else {
+          const light = (r+c)%2===0;
+          sq.style.background = light ? C.boardL : C.boardD;
+        }
+      });
+
+      // After short pause, play opponent move
+      setTimeout(() => playOpponentMove(chosenIdx), 800);
+    }, totalDur);
+  }
+
+  // Opponent response: bP d5→d4
+  const oppMove = { sr:3, sc:3, dr:4, dd:3 };
+
+  function playOpponentMove(playerChosenIdx) {
+    const om = oppMove;
+
+    // 1. Clear player move tint
+    board.querySelectorAll('.sq').forEach(sq => {
+      const r = parseInt(sq.dataset.r), c = parseInt(sq.dataset.c);
+      const light = (r+c)%2===0;
+      sq.style.transition = 'background 300ms ease-out';
+      sq.style.background = light ? C.boardL : C.boardD;
+    });
+
+    // 2. Animate opponent piece after tint fade
+    setTimeout(() => {
+      const srcSq = getSquare(om.sr, om.sc);
+      const dstSq = getSquare(om.dr, om.dd);
+      const srcPc = srcSq.querySelector('.pc');
+      if (!srcPc) { resetBoard(); return; }
+
+      const wrap = document.getElementById('anim-board-wrap');
+      const wrapRect = wrap.getBoundingClientRect();
+      const srcRect = srcSq.getBoundingClientRect();
+      const dstRect = dstSq.getBoundingClientRect();
+
+      // Create flying piece clone
+      const flyPc = srcPc.cloneNode(true);
+      flyPc.style.position = 'absolute';
+      flyPc.style.width = srcRect.width * 0.88 + 'px';
+      flyPc.style.height = srcRect.height * 0.88 + 'px';
+      const offX = srcRect.width * 0.06;
+      const offY = srcRect.height * 0.06;
+      flyPc.style.left = (srcRect.left - wrapRect.left + offX) + 'px';
+      flyPc.style.top = (srcRect.top - wrapRect.top + offY) + 'px';
+      flyPc.style.zIndex = '10';
+      flyPc.style.pointerEvents = 'none';
+      wrap.appendChild(flyPc);
+
+      // Hide original
+      srcPc.style.opacity = '0';
+
+      // Capture at destination?
+      const dstPc = dstSq.querySelector('.pc');
+      if (dstPc) {
+        dstPc.style.transition = 'opacity 150ms ease-out, transform 150ms ease-out';
+        dstPc.style.opacity = '0';
+        dstPc.style.transform = 'scale(0.7)';
+      }
+
+      // Straight move animation
+      flyPc.style.transition = 'left 200ms ease-out, top 200ms ease-out';
+      requestAnimationFrame(() => {
+        flyPc.style.left = (dstRect.left - wrapRect.left + offX) + 'px';
+        flyPc.style.top = (dstRect.top - wrapRect.top + offY) + 'px';
+      });
+
+      // After animation: update board, tint opponent squares, then loop
+      setTimeout(() => {
+        flyPc.remove();
+        if (dstPc) dstPc.remove();
+        srcPc.style.opacity = '1';
+        dstSq.appendChild(srcPc);
+
+        // Tint opponent move squares
+        [{ r: om.sr, c: om.sc }, { r: om.dr, c: om.dd }].forEach(({ r, c }) => {
+          const sq = getSquare(r, c);
+          if (!sq) return;
+          const light = (r+c)%2===0;
+          const base = light ? C.boardL : C.boardD;
+          sq.style.transition = 'background 200ms ease-out';
+          sq.style.background = mixColors(base, C.opponentTint, 0.35);
+        });
+
+        // Pause then loop back
+        setTimeout(() => resetBoard(), 1200);
+      }, 220);
+    }, 350);
+  }
+
+  function playShake() {
+    if (state !== 'showing') return;
+    const groups = arrowsSvg.querySelectorAll('g[data-arrow]');
+    groups.forEach(g => {
+      const currentAnim = g.style.animation;
+      g.style.animation = 'none';
+      g.offsetHeight;
+      g.style.opacity = '1';
+      g.style.animation = 'arrow-shake 300ms ease-out, arrow-pulse 300ms ease-out';
+      setTimeout(() => {
+        g.style.animation = 'none';
+        g.style.opacity = '1';
+      }, 320);
+    });
+  }
+
+  function resetBoard() {
+    // Restore pieces to original positions
+    board.querySelectorAll('.sq').forEach(sq => {
+      const r = parseInt(sq.dataset.r), c = parseInt(sq.dataset.c);
+      const existingPc = sq.querySelector('.pc');
+      const piece = pos[r][c];
+      if (piece && !existingPc) {
+        const img = document.createElement('img');
+        img.className = 'pc';
+        img.src = `${BASE}/${piece}.svg`;
+        img.draggable = false;
+        sq.appendChild(img);
+      } else if (!piece && existingPc) {
+        existingPc.remove();
+      } else if (piece && existingPc) {
+        existingPc.src = `${BASE}/${piece}.svg`;
+        existingPc.style.opacity = '1';
+        existingPc.style.transform = '';
+        existingPc.style.transition = '';
+      }
+    });
+    // Remove any stray flying pieces
+    document.querySelectorAll('#anim-board-wrap > img').forEach(i => i.remove());
+    // playAppear handles clearAllTints + tinting in sync with arrows
+    playAppear();
+  }
+
+  // Click on board
+  board.addEventListener('click', (e) => {
+    const sq = e.target.closest('.sq');
+    if (!sq) return;
+    const r = parseInt(sq.dataset.r), c = parseInt(sq.dataset.c);
+    const arrowIdx = findArrowForSquare(r, c);
+    if (arrowIdx >= 0) {
+      playDismiss(arrowIdx);
+    } else {
+      playShake();
+    }
+  });
+
+  // Reset button
+  resetBtn.addEventListener('click', resetBoard);
+
+  // Initial appear
+  setTimeout(playAppear, 300);
+}
+
+// ===================== RENDU =====================
+
+const el = document.getElementById('screens');
+el.innerHTML = `
+
+  <h2 class="section-title" id="s-home">Ecran d'accueil</h2>
+  <div class="phones-row">
+    ${phone('Light', bgVariants.sable.bg, homeScreen(bgVariants.sable))}
+    ${phone('Dark', bgVariants.foret.bg, homeScreen(bgVariants.foret))}
+  </div>
+
+  <h2 class="section-title" id="s-game">Ecran de jeu</h2>
+  <div class="phones-row">
+    ${phone('Light', bgVariants.sable.bg, gameScreen(bgVariants.sable))}
+    ${phone('Dark', bgVariants.foret.bg, gameScreen(bgVariants.foret))}
+  </div>
+
+  <h2 class="section-title" id="s-undo">Apres un coup — Toast annulation</h2>
+  <div class="phones-row">
+    ${phone('Coup joué — Light', bgVariants.sable.bg, `
+      <div style="display:flex;flex-direction:column;height:100%;min-height:560px">
+        ${appHeader(bgVariants.sable.text, false)}
+        <div style="flex:1"></div>
+        ${capturedRow(['wP','wP','wN'], 'flex-start', false)}
+        <div style="position:relative">
+          <div class="board">${boardAfterMove(1, false)}</div>
+        </div>
+        ${capturedRow(['bP'], 'flex-start', false)}
+        <div style="flex:1"></div>
+      </div>
+      ${undoToast(bgVariants.sable)}
+    `)}
+    ${phone('Coup joué — Dark', bgVariants.foret.bg, `
+      <div style="display:flex;flex-direction:column;height:100%;min-height:560px">
+        ${appHeader(bgVariants.foret.text, true)}
+        <div style="flex:1"></div>
+        ${capturedRow(['wP','wP','wN'], 'flex-start', true)}
+        <div style="position:relative">
+          <div class="board">${boardAfterMove(1, false)}</div>
+        </div>
+        ${capturedRow(['bP'], 'flex-start', true)}
+        <div style="flex:1"></div>
+      </div>
+      ${undoToast(bgVariants.foret)}
+    `)}
+  </div>
+
+  <h2 class="section-title" id="s-opp">Reponse adversaire</h2>
+  <div class="phones-row">
+    ${phone('Light', bgVariants.sable.bg, `
+      <div style="display:flex;flex-direction:column;height:100%;min-height:560px">
+        ${appHeader(bgVariants.sable.text, false)}
+        <div style="flex:1"></div>
+        ${capturedRow(['wP','wP','wN'], 'flex-start', false)}
+        <div style="position:relative">
+          <div class="board">${boardAfterMove(1, true)}</div>
+        </div>
+        ${capturedRow(['bP'], 'flex-start', false)}
+        <div style="flex:1"></div>
+        <div style="display:flex;justify-content:center;padding-bottom:8px">
+          <button style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:500;color:${bgVariants.sable.textSec};background:none;border:none;cursor:pointer;padding:6px 16px;opacity:0.5">Abandonner</button>
+        </div>
+      </div>
+    `)}
+    ${phone('Dark', bgVariants.foret.bg, `
+      <div style="display:flex;flex-direction:column;height:100%;min-height:560px">
+        ${appHeader(bgVariants.foret.text, true)}
+        <div style="flex:1"></div>
+        ${capturedRow(['wP','wP','wN'], 'flex-start', true)}
+        <div style="position:relative">
+          <div class="board">${boardAfterMove(1, true)}</div>
+        </div>
+        ${capturedRow(['bP'], 'flex-start', true)}
+        <div style="flex:1"></div>
+        <div style="display:flex;justify-content:center;padding-bottom:8px">
+          <button style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:500;color:${bgVariants.foret.textSec};background:none;border:none;cursor:pointer;padding:6px 16px;opacity:0.5">Abandonner</button>
+        </div>
+      </div>
+    `)}
+  </div>
+
+  <h2 class="section-title" id="s-endgame">Fin de partie</h2>
+  <div class="phones-row">
+    ${phone('Victoire — Light', bgVariants.sable.bg, endgameScreen('win', bgVariants.sable))}
+    ${phone('Victoire — Dark', bgVariants.foret.bg, endgameScreen('win', bgVariants.foret))}
+  </div>
+  <div class="phones-row">
+    ${phone('Defaite — Light', bgVariants.sable.bg, endgameScreen('loss', bgVariants.sable))}
+    ${phone('Defaite — Dark', bgVariants.foret.bg, endgameScreen('loss', bgVariants.foret))}
+  </div>
+
+  <h2 class="section-title" id="s-anim">Animations des fleches — Interactif</h2>
+  <p style="text-align:center;font-size:11px;color:#8A8078;margin:-4px 0 8px">
+    Cliquez sur une <b>fleche/case teintee</b> pour jouer le coup, ou sur une <b>case vide</b> pour voir le shake. Bouton "Rejouer" pour relancer.
+  </p>
+  <div class="phones-row">
+    ${phone('Clique pour tester', bgVariants.foret.bg, interactiveGameScreen())}
+  </div>
+`;
+
+// Setup interactive demo after DOM render
+setTimeout(setupAnimDemo, 50);
+
+</script>
+</body>
+</html>
