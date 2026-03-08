@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useGameStore } from '../../store/game-store'
 import type { ClassifiedMove } from '../../types/chess'
 
@@ -31,10 +32,13 @@ function getPieceNameForArrow(san: string): string {
 export function MoveArrows({ onSelectMove }: MoveArrowsProps) {
   const currentMoves = useGameStore((state) => state.currentMoves)
 
-  if (!currentMoves || currentMoves.length === 0) return null
+  // Shuffle once when moves change so colors don't correlate with quality
+  const shuffled = useMemo(() => {
+    if (!currentMoves || currentMoves.length === 0) return null
+    return [...currentMoves].sort(() => Math.random() - 0.5)
+  }, [currentMoves])
 
-  // Shuffle the assignment so colors don't correlate with quality
-  const shuffled = [...currentMoves].sort(() => Math.random() - 0.5)
+  if (!shuffled) return null
 
   return (
     <svg

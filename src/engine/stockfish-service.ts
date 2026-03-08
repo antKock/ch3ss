@@ -1,3 +1,4 @@
+import { Chess } from 'chess.js'
 import type { ClassifiedMove } from '../types/chess'
 import { classifyMoves, mateScoreToCp, type RawMove } from './move-classifier'
 import { createStockfishWorker } from './stockfish.worker'
@@ -169,17 +170,21 @@ export async function generatePlayerMoves(
   }
 
   // Build raw moves sorted by score (best first)
+  // Use chess.js to convert UCI moves to proper SAN notation
+  const chess = new Chess(fen)
   const rawMoves: RawMove[] = []
   const sortedEntries = [...moveData.entries()].sort((a, b) => b[1].score - a[1].score)
 
-  // We need SAN notation — use a chess.js import dynamically if needed,
-  // but for now UCI moves are sufficient (SAN will be derived when playing the move)
   for (const [, data] of sortedEntries) {
     const { from, to, promotion } = parseUCIMove(data.pv)
+    // Convert UCI to SAN by making/undoing the move in chess.js
+    const moveResult = chess.move({ from, to, promotion })
+    const san = moveResult ? moveResult.san : `${from}${to}`
+    if (moveResult) chess.undo()
     rawMoves.push({
       from,
       to,
-      san: data.pv, // Will be replaced with proper SAN when move is played
+      san,
       score: data.score,
       promotion,
     })
@@ -213,10 +218,15 @@ export async function getAIMove(
   const uciMove = bestmoveLine.split(' ')[1]
   const { from, to, promotion } = parseUCIMove(uciMove)
 
+  // Convert UCI to SAN using chess.js
+  const chess = new Chess(fen)
+  const moveResult = chess.move({ from, to, promotion })
+  const san = moveResult ? moveResult.san : uciMove
+
   // Reset ELO limiting
   sendCommand('setoption name UCI_LimitStrength value false')
 
-  return { from, to, san: uciMove, promotion }
+  return { from, to, san, promotion }
 }
 
 export function isEngineInitialized(): boolean {

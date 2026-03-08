@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, Component, type ReactNode } from 'react'
+import { Chess } from 'chess.js'
 import './index.css'
 import { Header } from './components/Header/Header'
 import { Board } from './components/Board/Board'
@@ -71,17 +72,15 @@ function GameApp() {
 
   const handleSelectMove = useCallback(
     (move: ClassifiedMove) => {
-      // Check for pawn promotion
+      // Check for pawn promotion using chess.js to verify the piece type
+      const chess = new Chess(fen)
+      const piece = chess.get(move.from as import('chess.js').Square)
       const isPawnPromotion =
+        piece?.type === 'p' &&
         move.to[1] === '8' &&
-        fen.includes(' w ') &&
         !move.promotion
 
-      // Check if the piece at 'from' is a pawn
-      // Simple check: if move doesn't start with a capital letter in SAN, it's a pawn
-      const isPawnMove = move.san[0] === move.san[0].toLowerCase() || move.san[0] >= 'a' && move.san[0] <= 'h'
-
-      if (isPawnPromotion && isPawnMove) {
+      if (isPawnPromotion) {
         setPendingPromotion({
           from: move.from,
           to: move.to,

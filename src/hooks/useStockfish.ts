@@ -127,7 +127,7 @@ export function useStockfish() {
       setError(err instanceof Error ? err.message : String(err))
       console.error('AI response failed:', err)
     }
-  }, [settings.opponentElo, playAIMove, presentMoves])
+  }, [settings.opponentElo, playAIMove, presentMoves, endGame])
 
   return {
     isReady,

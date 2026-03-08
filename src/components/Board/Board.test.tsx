@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { Board } from './Board'
 import { useGameStore } from '../../store/game-store'
@@ -67,8 +67,10 @@ describe('Board', () => {
   it('updates when FEN changes', () => {
     render(<Board />)
     // After 1. e4, e2 pawn should be on e4
-    useGameStore.setState({
-      fen: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
+    act(() => {
+      useGameStore.setState({
+        fen: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
+      })
     })
 
     // Re-render will pick up store change automatically via Zustand

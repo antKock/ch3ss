@@ -90,7 +90,11 @@ export const useGameStore = create<GameStore>()(
       playAIMove: (move) => {
         const state = get()
         const chess = new Chess(state.fen)
-        chess.move(move)
+        const result = chess.move(move)
+        if (!result) {
+          console.error('Invalid AI move:', move)
+          return
+        }
         set({ fen: chess.fen() })
       },
 

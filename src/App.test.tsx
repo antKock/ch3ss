@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { App } from './App'
 import { useGameStore } from './store/game-store'
@@ -11,7 +11,7 @@ vi.mock('./engine/stockfish-service', () => ({
     { from: 'd2', to: 'd4', san: 'd4', classification: 'correct', evalLoss: 50 },
     { from: 'a2', to: 'a3', san: 'a3', classification: 'bof', evalLoss: 150 },
   ]),
-  getAIMove: vi.fn().mockResolvedValue({ from: 'e7', to: 'e5', san: 'e7e5' }),
+  getAIMove: vi.fn().mockResolvedValue({ from: 'e7', to: 'e5', san: 'e5' }),
 }))
 
 describe('App', () => {
@@ -22,31 +22,42 @@ describe('App', () => {
       moveHistory: [],
       currentMoves: null,
       result: undefined,
+      isEngineReady: false,
     })
   })
 
-  it('renders app with header', () => {
-    render(<App />)
+  it('renders app with header', async () => {
+    await act(async () => {
+      render(<App />)
+    })
     expect(screen.getByText('ch3ss')).toBeInTheDocument()
   })
 
-  it('renders board on mount', () => {
-    render(<App />)
+  it('renders board on mount', async () => {
+    await act(async () => {
+      render(<App />)
+    })
     expect(screen.getByRole('grid')).toBeInTheDocument()
   })
 
-  it('renders 64 squares', () => {
-    render(<App />)
+  it('renders 64 squares', async () => {
+    await act(async () => {
+      render(<App />)
+    })
     expect(screen.getAllByRole('gridcell')).toHaveLength(64)
   })
 
-  it('renders resign button during play', () => {
-    render(<App />)
+  it('renders resign button during play', async () => {
+    await act(async () => {
+      render(<App />)
+    })
     expect(screen.getByLabelText('Resign game')).toBeInTheDocument()
   })
 
-  it('does not show EndGame overlay during play', () => {
-    render(<App />)
+  it('does not show EndGame overlay during play', async () => {
+    await act(async () => {
+      render(<App />)
+    })
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 })
