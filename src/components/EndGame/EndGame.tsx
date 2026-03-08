@@ -4,7 +4,7 @@ import type { GameResult } from '../../types/chess'
 
 function getResultDisplay(
   result: GameResult,
-  playerColor: 'w',
+  playerColor: 'w' | 'b',
 ): { title: string; subtitle?: string } {
   switch (result.type) {
     case 'checkmate':

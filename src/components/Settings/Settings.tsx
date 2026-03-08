@@ -1,15 +1,19 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../../store/game-store'
 import type { GameResult } from '../../types/chess'
 
-function resultLabel(result: GameResult): string {
+const ELO_PRESETS = [800, 1000, 1200, 1400, 1600]
+
+function resultIcon(result: GameResult, playerColor: 'w' | 'b'): { icon: string; color: string } {
   switch (result.type) {
     case 'checkmate':
-      return result.winner === 'w' ? 'Victory' : 'Defeat'
+      return result.winner === playerColor
+        ? { icon: '✓', color: 'var(--color-accent)' }
+        : { icon: '✗', color: '#c44' }
     case 'stalemate':
-      return 'Draw'
+      return { icon: '=', color: 'var(--color-text-sec)' }
     case 'resignation':
-      return 'Resigned'
+      return { icon: '✗', color: '#c44' }
   }
 }
 
@@ -19,45 +23,34 @@ export function Settings() {
   const settings = useGameStore((state) => state.settings)
   const updateSettings = useGameStore((state) => state.updateSettings)
   const gameHistory = useGameStore((state) => state.gameHistory)
-  const drawerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLElement | null>(null)
+  const [isVisible, setIsVisible] = useState(false)
+  const [isClosing, setIsClosing] = useState(false)
 
-  // Focus trap and keyboard handling
+  // Track mount/unmount with animation
   useEffect(() => {
-    if (!showSettings || !drawerRef.current) return
-
-    // Store the element that opened the drawer for focus return
-    triggerRef.current = document.activeElement as HTMLElement
-
-    const focusable = drawerRef.current.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )
-    const first = focusable[0] as HTMLElement
-    const last = focusable[focusable.length - 1] as HTMLElement
-
-    first?.focus()
-
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowSettings(false)
-        return
-      }
-      if (e.key === 'Tab') {
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault()
-          last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault()
-          first.focus()
-        }
-      }
+    if (showSettings) {
+      setIsVisible(true)
+      setIsClosing(false)
+    } else if (isVisible) {
+      // Animate out
+      setIsClosing(true)
+      const timer = setTimeout(() => {
+        setIsVisible(false)
+        setIsClosing(false)
+      }, 300)
+      return () => clearTimeout(timer)
     }
+  }, [showSettings]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [showSettings, setShowSettings])
+  useEffect(() => {
+    if (showSettings && containerRef.current) {
+      triggerRef.current = document.activeElement as HTMLElement
+      containerRef.current.focus()
+    }
+  }, [showSettings])
 
-  // Return focus to trigger on close
   useEffect(() => {
     if (!showSettings && triggerRef.current) {
       triggerRef.current.focus()
@@ -65,106 +58,209 @@ export function Settings() {
     }
   }, [showSettings])
 
+  useEffect(() => {
+    if (!showSettings) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowSettings(false)
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [showSettings, setShowSettings])
+
+  if (!isVisible) return null
+
   return (
     <div
-      className={`fixed inset-0 z-40 transition-visibility ${showSettings ? '' : 'pointer-events-none'}`}
-      onClick={() => setShowSettings(false)}
+      ref={containerRef}
+      className={`fixed inset-0 z-50 bg-[var(--color-bg)] overflow-y-auto ${isClosing ? 'settings-screen-exit' : 'settings-screen-enter'}`}
+      role="dialog"
+      aria-label="Réglages"
+      aria-modal="true"
+      tabIndex={-1}
     >
-      {/* Backdrop */}
-      <div className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${showSettings ? 'opacity-100' : 'opacity-0'}`} />
-
-      {/* Drawer */}
-      <div
-        ref={drawerRef}
-        role="dialog"
-        aria-label="Settings"
-        aria-modal="true"
-        aria-hidden={!showSettings}
-        inert={!showSettings ? true : undefined}
-        className={`absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-[var(--color-bg-secondary)] shadow-2xl p-6 overflow-y-auto settings-drawer ${showSettings ? 'open' : ''} motion-reduce:transition-none`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close button */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold">Settings</h2>
+      <div className="max-w-md mx-auto px-4 pt-3 pb-8">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => setShowSettings(false)}
-            className="p-1 rounded hover:bg-white/10 transition-colors"
-            aria-label="Close settings"
+            className="p-1 hover:opacity-80 transition-opacity"
+            aria-label="Retour"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
+          <h2 className="text-xl font-bold">Réglages</h2>
         </div>
 
-        {/* ELO Slider */}
-        <section className="mb-8">
-          <label htmlFor="elo-slider" className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
-            AI Difficulty
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              id="elo-slider"
-              type="range"
-              min={800}
-              max={1600}
-              step={50}
-              value={settings.opponentElo}
-              onChange={(e) => updateSettings({ opponentElo: Number(e.target.value) })}
-              className="flex-1 accent-[var(--color-accent)]"
-              aria-label="AI difficulty ELO"
-              aria-valuemin={800}
-              aria-valuemax={1600}
-              aria-valuenow={settings.opponentElo}
-            />
-            <span className="text-lg font-mono font-semibold w-12 text-right">{settings.opponentElo}</span>
-          </div>
-          <div className="flex justify-between text-xs text-[var(--color-text-secondary)] mt-1">
-            <span>800</span>
-            <span>1600</span>
-          </div>
-        </section>
-
-        {/* Theme Toggle */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-[var(--color-text-secondary)]">Light Theme</span>
-            <button
-              role="switch"
-              aria-checked={settings.theme === 'light'}
-              aria-label="Toggle theme"
-              onClick={() => updateSettings({ theme: settings.theme === 'dark' ? 'light' : 'dark' })}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
-                settings.theme === 'light' ? 'bg-[var(--color-accent)]' : 'bg-gray-600'
-              }`}
+        <div className="flex flex-col gap-4">
+          {/* Theme toggle */}
+          <section
+            className="rounded-[18px] p-5"
+            style={{ backgroundColor: 'var(--color-surface)' }}
+          >
+            <p className="text-[12px] font-bold uppercase text-[var(--color-text-sec)] mb-3 tracking-wider">Thème</p>
+            <div
+              className="flex rounded-[10px] overflow-hidden"
+              style={{ backgroundColor: 'var(--color-input-bg)' }}
             >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
-                  settings.theme === 'light' ? 'translate-x-6' : ''
-                }`}
-              />
-            </button>
-          </div>
-        </section>
-
-        {/* Game History */}
-        <section aria-label="Game History">
-          <h3 className="text-lg font-semibold mb-2">History</h3>
-          {gameHistory.length === 0 ? (
-            <p className="text-[var(--color-text-secondary)] text-center py-4">No games played yet</p>
-          ) : (
-            <ul className="space-y-2 max-h-60 overflow-y-auto">
-              {gameHistory.map((game) => (
-                <li key={game.date} className="flex justify-between text-sm py-1 border-b border-white/10 last:border-0">
-                  <span className="text-[var(--color-text-secondary)]">{new Date(game.date).toLocaleDateString()}</span>
-                  <span className="font-medium">{resultLabel(game.result)}</span>
-                  <span className="text-[var(--color-text-secondary)]">{game.moveCount} moves</span>
-                </li>
+              {(['light', 'dark'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => updateSettings({ theme: t })}
+                  className="flex-1 py-2 text-[13px] font-semibold transition-all"
+                  style={{
+                    backgroundColor: settings.theme === t ? 'var(--color-accent)' : 'transparent',
+                    color: settings.theme === t ? '#fff' : 'var(--color-text)',
+                  }}
+                >
+                  {t === 'light' ? 'Clair' : 'Sombre'}
+                </button>
               ))}
-            </ul>
-          )}
-        </section>
+            </div>
+          </section>
+
+          {/* ELO presets */}
+          <section
+            className="rounded-[18px] p-5"
+            style={{ backgroundColor: 'var(--color-surface)' }}
+          >
+            <p className="text-[12px] font-bold uppercase text-[var(--color-text-sec)] mb-3 tracking-wider">Niveau ELO</p>
+            <div className="flex gap-2">
+              {ELO_PRESETS.map((elo) => (
+                <button
+                  key={elo}
+                  onClick={() => updateSettings({ opponentElo: elo })}
+                  className="flex-1 py-2 rounded-[10px] text-[13px] font-semibold transition-all"
+                  style={{
+                    backgroundColor: settings.opponentElo === elo ? 'var(--color-accent)' : 'var(--color-input-bg)',
+                    color: settings.opponentElo === elo ? '#fff' : 'var(--color-text)',
+                  }}
+                  aria-label={`ELO ${elo}`}
+                  aria-pressed={settings.opponentElo === elo}
+                >
+                  {elo}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Dev controls - Thresholds */}
+          <section
+            className="rounded-[18px] p-5"
+            style={{ backgroundColor: 'var(--color-surface)' }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-[12px] font-bold uppercase text-[var(--color-text-sec)] tracking-wider">Eval-loss seuils (CP)</p>
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded"
+                style={{
+                  color: 'var(--color-accent)',
+                  backgroundColor: 'rgba(106, 128, 96, 0.15)',
+                }}
+              >
+                DEV
+              </span>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-[11px] text-[var(--color-text-sec)] mb-1 block">T1</label>
+                <input
+                  type="number"
+                  value={settings.devT1}
+                  onChange={(e) => updateSettings({ devT1: Number(e.target.value) })}
+                  className="w-full px-3 py-2 rounded-[10px] text-[14px] text-center bg-[var(--color-input-bg)] text-[var(--color-text)] border-0 outline-none"
+                  min={0}
+                  max={500}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-[11px] text-[var(--color-text-sec)] mb-1 block">T2</label>
+                <input
+                  type="number"
+                  value={settings.devT2}
+                  onChange={(e) => updateSettings({ devT2: Number(e.target.value) })}
+                  className="w-full px-3 py-2 rounded-[10px] text-[14px] text-center bg-[var(--color-input-bg)] text-[var(--color-text)] border-0 outline-none"
+                  min={0}
+                  max={1000}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Dev controls - Depth */}
+          <section
+            className="rounded-[18px] p-5"
+            style={{ backgroundColor: 'var(--color-surface)' }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-[12px] font-bold uppercase text-[var(--color-text-sec)] tracking-wider">Depth (demi-coups)</p>
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded"
+                style={{
+                  color: 'var(--color-accent)',
+                  backgroundColor: 'rgba(106, 128, 96, 0.15)',
+                }}
+              >
+                DEV
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={4}
+                max={20}
+                value={settings.devDepth}
+                onChange={(e) => updateSettings({ devDepth: Number(e.target.value) })}
+                className="flex-1 accent-[var(--color-accent)]"
+                aria-label="Stockfish depth"
+              />
+              <span className="text-[14px] font-semibold w-8 text-right">{settings.devDepth}</span>
+            </div>
+          </section>
+
+          {/* Game history */}
+          <section
+            className="rounded-[18px] p-5"
+            style={{ backgroundColor: 'var(--color-surface)' }}
+            aria-label="Historique"
+          >
+            <p className="text-[12px] font-bold uppercase text-[var(--color-text-sec)] mb-3 tracking-wider">Historique</p>
+            {gameHistory.length === 0 ? (
+              <p className="text-[var(--color-text-sec)] text-center py-4 text-[13px]">Aucune partie jouée</p>
+            ) : (
+              <div className="flex flex-col">
+                {gameHistory.map((game, idx) => {
+                  const { icon, color } = resultIcon(game.result, game.playerColor)
+                  const dist = game.distribution
+                  return (
+                    <div
+                      key={game.date}
+                      className={`flex items-center gap-3 py-2.5 ${
+                        idx < gameHistory.length - 1 ? 'border-b border-[var(--color-border)]' : ''
+                      }`}
+                    >
+                      <span className="text-[16px] font-bold w-6 text-center" style={{ color }}>
+                        {icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] text-[var(--color-text)]">
+                          {game.moveCount} coups
+                          {game.duration ? ` · ${Math.floor(game.duration / 60)}m${game.duration % 60}s` : ''}
+                        </p>
+                        {dist && (
+                          <p className="text-[11px] text-[var(--color-text-sec)]">
+                            Top {dist.top}% · Correct {dist.correct}% · Bof {dist.bof}%
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        </div>
       </div>
     </div>
   )

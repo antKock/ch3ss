@@ -1,13 +1,38 @@
 @import "tailwindcss";
 
+/* === Dark theme (Forêt) — default === */
 :root {
-  --color-bg-primary: #1a1a2e;
-  --color-bg-secondary: #16213e;
-  --color-text-primary: #e0e0e0;
-  --color-text-secondary: #a0a0a0;
-  --color-accent: #5b8def;
-  --color-square-light: #b7c0d8;
-  --color-square-dark: #4a5568;
+  --color-bg: #1E2A22;
+  --color-text: #E0DDD6;
+  --color-text-sec: #8A9A86;
+  --color-surface: #2A3A2E;
+  --color-accent: #6A8060;
+  --color-border: rgba(0,0,0,0.06);
+  --color-square-light: #E8F0E8;
+  --color-square-dark: #B8D0B4;
+  --color-input-bg: #1E2A22;
+  /* Legacy aliases */
+  --color-bg-primary: var(--color-bg);
+  --color-bg-secondary: var(--color-surface);
+  --color-text-primary: var(--color-text);
+  --color-text-secondary: var(--color-text-sec);
+}
+
+/* === Light theme (Sable) === */
+html.light {
+  --color-bg: #EDE8DF;
+  --color-text: #3D3A36;
+  --color-text-sec: #8A8078;
+  --color-surface: #ffffff;
+  --color-accent: #6A8060;
+  --color-border: rgba(0,0,0,0.06);
+  --color-square-light: #E8F0E8;
+  --color-square-dark: #B8D0B4;
+  --color-input-bg: #EDE8DF;
+  --color-bg-primary: var(--color-bg);
+  --color-bg-secondary: var(--color-surface);
+  --color-text-primary: var(--color-text);
+  --color-text-secondary: var(--color-text-sec);
 }
 
 body {
@@ -15,62 +40,156 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: 'Poppins', sans-serif;
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Arrow staggered animations */
+/* === Arrow animations (Story 4.5) === */
 @keyframes arrowAppear {
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
+  0% { opacity: 0; transform: scale(0.85); }
+  70% { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-.animate-arrow-1 { animation: arrowAppear 0.3s ease-out 0ms forwards; }
-.animate-arrow-2 { animation: arrowAppear 0.3s ease-out 100ms forwards; }
-.animate-arrow-3 { animation: arrowAppear 0.3s ease-out 200ms forwards; }
+.animate-arrow-1 { animation: arrowAppear 220ms ease-out 0ms forwards; }
+.animate-arrow-2 { animation: arrowAppear 220ms ease-out 90ms forwards; }
+.animate-arrow-3 { animation: arrowAppear 220ms ease-out 180ms forwards; }
 
-@media (prefers-reduced-motion: reduce) {
-  .animate-arrow-1,
-  .animate-arrow-2,
-  .animate-arrow-3 {
-    animation: none;
-    opacity: 1;
+/* Arrow shake on invalid tap (Story 4.6) */
+@keyframes arrowShake {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-3px); }
+  35% { transform: translateX(3px); }
+  55% { transform: translateX(-3px); }
+  75% { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes arrowPulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.arrow-shake {
+  animation: arrowShake 300ms ease-out, arrowPulse 300ms ease-out;
+}
+
+/* Arrow dismiss animations (Story 4.6) */
+@keyframes arrowDismissChosen {
+  to { opacity: 0; }
+}
+
+@keyframes arrowDismissOther {
+  to { opacity: 0; transform: scale(0.9); }
+}
+
+.arrow-dismiss-chosen {
+  animation: arrowDismissChosen 150ms ease-out forwards;
+}
+
+.arrow-dismiss-other {
+  animation: arrowDismissOther 220ms ease-out forwards;
+}
+
+/* === Checkmate effects (Story 4.10) === */
+@keyframes kingTremble {
+  0% { transform: translateX(2px) rotate(1deg); }
+  25% { transform: translateX(-1.5px) rotate(-0.7deg); }
+  50% { transform: translateX(1px) rotate(0.5deg); }
+  75% { transform: translateX(-0.5px) rotate(-0.3deg); }
+  100% { transform: translateX(0) rotate(0); }
+}
+
+.checkmate-king {
+  animation: kingTremble 600ms ease-out infinite;
+  box-shadow: inset 0 0 18px 4px rgba(200, 50, 50, 0.4);
+}
+
+@keyframes matingPiecePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.mating-piece-pulse {
+  animation: matingPiecePulse 400ms ease-out;
+}
+
+/* Board fade out for resignation (Story 4.10) */
+@keyframes boardFadeOut {
+  to { opacity: 0; }
+}
+
+.board-fade-out {
+  animation: boardFadeOut 400ms ease-out forwards;
+}
+
+/* === Toast animations (Story 4.3) === */
+@keyframes toastSlideUp {
+  0% { transform: translateY(12px); opacity: 0; }
+  70% { transform: translateY(-2px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.toast-enter {
+  animation: toastSlideUp 350ms ease-out forwards;
+}
+
+/* Cooldown ring animation */
+@keyframes cooldownRing {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: var(--ring-length); }
+}
+
+.cooldown-ring {
+  animation: cooldownRing 1.2s linear forwards;
+}
+
+/* === Piece capture animation (Story 4.6) === */
+.piece-captured {
+  animation: pieceCaptured 150ms ease-out forwards;
+}
+
+@keyframes pieceCaptured {
+  to {
+    opacity: 0;
+    transform: scale(0.7);
   }
 }
 
-/* Checkmate effects */
-@keyframes kingHalo {
-  0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
-  50% { box-shadow: 0 0 20px 10px rgba(255, 215, 0, 0.4); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+/* === Settings screen transitions === */
+.settings-screen-enter {
+  animation: slideInRight 300ms ease-out;
 }
 
-@keyframes boardTremble {
-  0%, 100% { transform: translate(0, 0); }
-  25% { transform: translate(-2px, 1px); }
-  50% { transform: translate(2px, -1px); }
-  75% { transform: translate(-1px, 2px); }
+.settings-screen-exit {
+  animation: slideOutRight 300ms ease-out forwards;
 }
 
-.checkmate-king { animation: kingHalo 1.5s ease-in-out 2; }
-.checkmate-board { animation: boardTremble 0.3s ease-in-out 3; }
-
-@media (prefers-reduced-motion: reduce) {
-  .checkmate-king, .checkmate-board { animation: none; }
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }
 
-html.light {
-  --color-bg-primary: #f5f5f5;
-  --color-bg-secondary: #ffffff;
-  --color-text-primary: #1a1a2e;
-  --color-text-secondary: #4a5568;
-  --color-square-light: #f0d9b5;
-  --color-square-dark: #b58863;
+@keyframes slideOutRight {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
 }
 
-/* Settings drawer animation */
+/* === Recap screen entrance === */
+.recap-enter {
+  animation: recapFadeIn 400ms ease-out;
+}
+
+@keyframes recapFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Legacy settings drawer */
 .settings-drawer {
   transform: translateX(100%);
   transition: transform 300ms ease-out;
@@ -79,7 +198,58 @@ html.light {
   transform: translateX(0);
 }
 
+/* === Reduced motion === */
 @media (prefers-reduced-motion: reduce) {
+  .animate-arrow-1,
+  .animate-arrow-2,
+  .animate-arrow-3 {
+    animation: none;
+    opacity: 1;
+  }
+
+  .arrow-shake,
+  .arrow-dismiss-chosen,
+  .arrow-dismiss-other {
+    animation: none;
+  }
+
+  .checkmate-king {
+    animation: none;
+    box-shadow: inset 0 0 18px 4px rgba(200, 50, 50, 0.4);
+  }
+
+  .mating-piece-pulse {
+    animation: none;
+  }
+
+  .board-fade-out {
+    animation: none;
+    opacity: 0;
+  }
+
+  .toast-enter {
+    animation: none;
+    opacity: 1;
+  }
+
+  .cooldown-ring {
+    animation: none;
+  }
+
+  .piece-captured {
+    animation: none;
+    opacity: 0;
+  }
+
+  .settings-screen-enter,
+  .settings-screen-exit {
+    animation: none;
+  }
+
+  .recap-enter {
+    animation: none;
+  }
+
   .settings-drawer {
     transition: none;
   }

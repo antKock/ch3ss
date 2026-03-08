@@ -11,23 +11,22 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function detectAndEndGame(
+function detectGameResult(
   chess: InstanceType<typeof Chess>,
-  endGame: (result: import('../types/chess').GameResult) => void,
-): void {
+): import('../types/chess').GameResult | null {
   if (chess.isCheckmate()) {
-    // The player whose turn it is has been checkmated
-    // So the OTHER player won
     const winner = chess.turn() === 'w' ? 'b' : 'w'
-    endGame({ type: 'checkmate', winner: winner as 'w' | 'b' })
+    return { type: 'checkmate', winner: winner as 'w' | 'b' }
   } else if (chess.isStalemate() || chess.isDraw()) {
-    endGame({ type: 'stalemate' })
+    return { type: 'stalemate' }
   }
+  return null
 }
 
 export function useStockfish() {
   const fen = useGameStore((state) => state.fen)
   const settings = useGameStore((state) => state.settings)
+  const playerColor = useGameStore((state) => state.playerColor)
   const presentMoves = useGameStore((state) => state.presentMoves)
   const playAIMove = useGameStore((state) => state.playAIMove)
   const endGame = useGameStore((state) => state.endGame)
@@ -36,6 +35,8 @@ export function useStockfish() {
   const [isLoading, setIsLoading] = useState(false)
   const [isAIThinking, setIsAIThinking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const aiColor = playerColor === 'w' ? 'b' : 'w'
 
   // Initialize engine on mount
   useEffect(() => {
@@ -75,38 +76,47 @@ export function useStockfish() {
 
     if (currentPhase !== 'playing') return
 
+    // Wait for piece animation to complete before continuing
+    await delay(250)
+
     // Check if game is over after player move
     const chess = new Chess(currentFen)
-    if (chess.isGameOver()) {
-      detectAndEndGame(chess, endGame)
+    const playerResult = detectGameResult(chess)
+    if (playerResult) {
+      // Checkmate: pause 1.5s on board with king tremble visible, then end
+      if (playerResult.type === 'checkmate') {
+        await delay(1500)
+      }
+      endGame(playerResult)
       return
     }
 
-    // It should now be black's turn (AI)
-    if (chess.turn() !== 'b') return
+    // It should now be AI's turn
+    if (chess.turn() !== aiColor) return
 
     setIsAIThinking(true)
     setError(null)
 
     try {
-      const startTime = Date.now()
-
       // Get AI response
       const aiMove = await getAIMoveService(
         currentFen,
         settings.opponentElo,
       )
 
-      // Apply artificial delay (~1s total)
-      const elapsed = Date.now() - startTime
-      if (elapsed < 1000) {
-        await delay(1000 - elapsed)
+      // No artificial delay — the undo toast cooldown serves as AI thinking time
+      // Small delay only if undo was already consumed
+      const undoState = useGameStore.getState().undoState
+      if (!undoState) {
+        await delay(300)
       }
 
       // Execute AI move
       playAIMove(aiMove)
-
       setIsAIThinking(false)
+
+      // Wait for piece animation to complete
+      await delay(250)
 
       // Check if game is over after AI move
       const postAiFen = useGameStore.getState().fen
@@ -114,8 +124,12 @@ export function useStockfish() {
       if (postAiPhase !== 'playing') return
 
       const postAiChess = new Chess(postAiFen)
-      if (postAiChess.isGameOver()) {
-        detectAndEndGame(postAiChess, endGame)
+      const aiResult = detectGameResult(postAiChess)
+      if (aiResult) {
+        if (aiResult.type === 'checkmate') {
+          await delay(1500)
+        }
+        endGame(aiResult)
         return
       }
 
@@ -127,7 +141,26 @@ export function useStockfish() {
       setError(err instanceof Error ? err.message : String(err))
       console.error('AI response failed:', err)
     }
-  }, [settings.opponentElo, playAIMove, presentMoves, endGame])
+  }, [aiColor, settings.opponentElo, playAIMove, presentMoves, endGame])
+
+  // Handle AI's first move when player is black
+  const handleAIFirstMove = useCallback(async () => {
+    const currentFen = useGameStore.getState().fen
+    setIsAIThinking(true)
+    try {
+      const aiMove = await getAIMoveService(currentFen, settings.opponentElo)
+      await delay(800)
+      playAIMove(aiMove)
+      setIsAIThinking(false)
+
+      const postAiFen = useGameStore.getState().fen
+      const moves = await generatePlayerMoves(postAiFen)
+      presentMoves(moves)
+    } catch (err) {
+      setIsAIThinking(false)
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }, [settings.opponentElo, playAIMove, presentMoves])
 
   return {
     isReady,
@@ -136,5 +169,6 @@ export function useStockfish() {
     error,
     generateMoves,
     handlePlayerMoveComplete,
+    handleAIFirstMove,
   }
 }
