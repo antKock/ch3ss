@@ -23,14 +23,20 @@ describe('App', () => {
       currentMoves: null,
       result: undefined,
       isEngineReady: false,
+      playerColor: 'w',
+      showFinalBoard: false,
     })
   })
 
-  it('renders app with header', async () => {
+  it('renders app with header during gameplay', async () => {
     await act(async () => {
       render(<App />)
     })
-    expect(screen.getByText('ch3ss')).toBeInTheDocument()
+    // Header shows "ch3ss" with "3" in accent color
+    const header = screen.getByRole('heading')
+    expect(header).toBeInTheDocument()
+    expect(header.textContent).toContain('ch')
+    expect(header.textContent).toContain('ss')
   })
 
   it('renders board on mount', async () => {
@@ -47,17 +53,18 @@ describe('App', () => {
     expect(screen.getAllByRole('gridcell')).toHaveLength(64)
   })
 
-  it('renders resign button during play', async () => {
+  it('renders abandon button during play', async () => {
     await act(async () => {
       render(<App />)
     })
-    expect(screen.getByLabelText('Resign game')).toBeInTheDocument()
+    expect(screen.getByLabelText('Abandonner la partie')).toBeInTheDocument()
   })
 
-  it('does not show EndGame overlay during play', async () => {
+  it('shows home screen when gamePhase is home', async () => {
+    useGameStore.setState({ gamePhase: 'home' })
     await act(async () => {
       render(<App />)
     })
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText('Jouer')).toBeInTheDocument()
   })
 })

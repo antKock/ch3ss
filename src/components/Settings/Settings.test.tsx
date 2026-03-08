@@ -7,7 +7,8 @@ describe('Settings', () => {
   beforeEach(() => {
     useGameStore.setState({
       showSettings: false,
-      settings: { opponentElo: 1000, theme: 'dark' },
+      settings: { opponentElo: 1000, theme: 'dark', devT1: 30, devT2: 100, devDepth: 12 },
+      gameHistory: [],
     })
     document.documentElement.classList.remove('light')
   })
@@ -21,21 +22,13 @@ describe('Settings', () => {
     useGameStore.setState({ showSettings: true })
     render(<Settings />)
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('Settings')).toBeInTheDocument()
+    expect(screen.getByText('Réglages')).toBeInTheDocument()
   })
 
-  it('closes when backdrop is clicked', () => {
-    useGameStore.setState({ showSettings: true })
-    const { container } = render(<Settings />)
-    // Click the outer fixed div (backdrop container)
-    fireEvent.click(container.firstChild as Element)
-    expect(useGameStore.getState().showSettings).toBe(false)
-  })
-
-  it('closes when close button is clicked', () => {
+  it('closes when back arrow is clicked', () => {
     useGameStore.setState({ showSettings: true })
     render(<Settings />)
-    fireEvent.click(screen.getByLabelText('Close settings'))
+    fireEvent.click(screen.getByLabelText('Retour'))
     expect(useGameStore.getState().showSettings).toBe(false)
   })
 
@@ -46,62 +39,48 @@ describe('Settings', () => {
     expect(useGameStore.getState().showSettings).toBe(false)
   })
 
-  it('traps focus within drawer when open', () => {
+  it('shows segmented theme toggle with Clair/Sombre', () => {
     useGameStore.setState({ showSettings: true })
     render(<Settings />)
-    const dialog = screen.getByRole('dialog')
-    const focusable = dialog.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )
-    const first = focusable[0] as HTMLElement
-    const last = focusable[focusable.length - 1] as HTMLElement
-
-    // Focus should start on first element
-    expect(document.activeElement).toBe(first)
-
-    // Tab from last element should wrap to first
-    last.focus()
-    fireEvent.keyDown(document, { key: 'Tab' })
-    expect(document.activeElement).toBe(first)
-
-    // Shift+Tab from first element should wrap to last
-    first.focus()
-    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
-    expect(document.activeElement).toBe(last)
+    expect(screen.getByText('Clair')).toBeInTheDocument()
+    expect(screen.getByText('Sombre')).toBeInTheDocument()
   })
 
-  it('updates ELO slider value in store', () => {
+  it('toggles theme via segmented control', () => {
     useGameStore.setState({ showSettings: true })
     render(<Settings />)
-    const slider = screen.getByLabelText('AI difficulty ELO')
-    fireEvent.change(slider, { target: { value: '1400' } })
-    expect(useGameStore.getState().settings.opponentElo).toBe(1400)
-  })
-
-  it('toggles theme in store', () => {
-    useGameStore.setState({ showSettings: true })
-    render(<Settings />)
-    const toggle = screen.getByLabelText('Toggle theme')
-    fireEvent.click(toggle)
+    fireEvent.click(screen.getByText('Clair'))
     expect(useGameStore.getState().settings.theme).toBe('light')
   })
 
-  it('settings persist after drawer close via Zustand persist', () => {
+  it('shows ELO preset buttons', () => {
     useGameStore.setState({ showSettings: true })
     render(<Settings />)
-    // Change ELO
-    fireEvent.change(screen.getByLabelText('AI difficulty ELO'), { target: { value: '1200' } })
-    // Close drawer
-    fireEvent.click(screen.getByLabelText('Close settings'))
+    expect(screen.getByText('800')).toBeInTheDocument()
+    expect(screen.getByText('1000')).toBeInTheDocument()
+    expect(screen.getByText('1200')).toBeInTheDocument()
+    expect(screen.getByText('1400')).toBeInTheDocument()
+    expect(screen.getByText('1600')).toBeInTheDocument()
+  })
 
-    const stored = JSON.parse(localStorage.getItem('ch3ss-game') || '{}')
-    expect(stored.state.settings.opponentElo).toBe(1200)
+  it('updates ELO via preset buttons', () => {
+    useGameStore.setState({ showSettings: true })
+    render(<Settings />)
+    fireEvent.click(screen.getByText('1400'))
+    expect(useGameStore.getState().settings.opponentElo).toBe(1400)
+  })
+
+  it('shows dev controls with DEV badge', () => {
+    useGameStore.setState({ showSettings: true })
+    render(<Settings />)
+    const devBadges = screen.getAllByText('DEV')
+    expect(devBadges.length).toBeGreaterThanOrEqual(2)
   })
 
   it('shows empty state message when no history', () => {
     useGameStore.setState({ showSettings: true, gameHistory: [] })
     render(<Settings />)
-    expect(screen.getByText('No games played yet')).toBeInTheDocument()
+    expect(screen.getByText('Aucune partie jouée')).toBeInTheDocument()
   })
 
   it('renders history list with correct data', () => {
@@ -112,21 +91,22 @@ describe('Settings', () => {
           date: '2026-03-08T12:00:00.000Z',
           result: { type: 'checkmate', winner: 'w' },
           moveCount: 25,
-          playerColor: 'w',
+          playerColor: 'w' as const,
+          distribution: { top: 50, correct: 30, bof: 20 },
         },
         {
           date: '2026-03-07T10:00:00.000Z',
           result: { type: 'stalemate' },
           moveCount: 40,
-          playerColor: 'w',
+          playerColor: 'w' as const,
+          distribution: { top: 30, correct: 40, bof: 30 },
         },
       ],
     })
     render(<Settings />)
 
-    expect(screen.getByText('Victory')).toBeInTheDocument()
-    expect(screen.getByText('25 moves')).toBeInTheDocument()
-    expect(screen.getByText('Draw')).toBeInTheDocument()
-    expect(screen.getByText('40 moves')).toBeInTheDocument()
+    expect(screen.getByText('25 coups')).toBeInTheDocument()
+    expect(screen.getByText('40 coups')).toBeInTheDocument()
+    expect(screen.getByText(/Top 50%/)).toBeInTheDocument()
   })
 })

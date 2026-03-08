@@ -1,36 +1,16 @@
 import { useGameStore } from '../../store/game-store'
 
 export function Header() {
-  const setShowSettings = useGameStore((state) => state.setShowSettings)
+  const gamePhase = useGameStore((state) => state.gamePhase)
+
+  // During gameplay, show only the logo centered (no gear icon — Story 4.8)
+  if (gamePhase !== 'playing') return null
 
   return (
-    <header className="w-full max-w-md mx-auto flex items-center justify-between px-4 py-3">
-      <h1 className="text-2xl font-bold tracking-tight">ch3ss</h1>
-      <button
-        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-        aria-label="Settings"
-        onClick={() => setShowSettings(true)}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-6 h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-      </button>
+    <header className="w-full max-w-md mx-auto flex items-center justify-center px-4 py-3">
+      <h1 className="text-[20px] font-extrabold tracking-tight">
+        ch<span className="text-[var(--color-accent)]">3</span>ss
+      </h1>
     </header>
   )
 }

@@ -22,19 +22,24 @@ export type GameResult =
 export interface GameState {
   fen: string
   moveHistory: MoveRecord[]
-  gamePhase: 'playing' | 'ended'
+  gamePhase: 'home' | 'playing' | 'ended'
   result?: GameResult
-  playerColor: 'w' // Player always white at MVP
+  playerColor: 'w' | 'b'
 }
 
 export interface Settings {
   opponentElo: number // 800-1600, default 1000
   theme: 'dark' | 'light' // default 'dark'
+  devT1: number // Top→Correct threshold cp, default 30
+  devT2: number // Correct→Bof threshold cp, default 100
+  devDepth: number // Stockfish depth, default 12
 }
 
 export interface CompletedGame {
   date: string // ISO date
   result: GameResult
   moveCount: number
-  playerColor: 'w'
+  playerColor: 'w' | 'b'
+  duration?: number // seconds
+  distribution?: { top: number; correct: number; bof: number }
 }

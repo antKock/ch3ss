@@ -12,7 +12,7 @@ const mockMoves: ClassifiedMove[] = [
 
 describe('MoveArrows', () => {
   beforeEach(() => {
-    useGameStore.setState({ currentMoves: null })
+    useGameStore.setState({ currentMoves: null, shuffledMoves: null })
   })
 
   it('renders nothing when no moves available', () => {
@@ -21,7 +21,7 @@ describe('MoveArrows', () => {
   })
 
   it('renders 3 arrows when 3 moves are presented', () => {
-    useGameStore.setState({ currentMoves: mockMoves })
+    useGameStore.setState({ currentMoves: mockMoves, shuffledMoves: mockMoves })
     render(<MoveArrows />)
 
     const buttons = screen.getAllByRole('button')
@@ -29,7 +29,7 @@ describe('MoveArrows', () => {
   })
 
   it('has descriptive ARIA labels on arrows', () => {
-    useGameStore.setState({ currentMoves: mockMoves })
+    useGameStore.setState({ currentMoves: mockMoves, shuffledMoves: mockMoves })
     render(<MoveArrows />)
 
     const buttons = screen.getAllByRole('button')
@@ -41,7 +41,7 @@ describe('MoveArrows', () => {
   })
 
   it('renders SVG overlay', () => {
-    useGameStore.setState({ currentMoves: mockMoves })
+    useGameStore.setState({ currentMoves: mockMoves, shuffledMoves: mockMoves })
     const { container } = render(<MoveArrows />)
 
     const svg = container.querySelector('svg')

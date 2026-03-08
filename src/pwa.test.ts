@@ -39,11 +39,9 @@ describe('PWA Configuration', () => {
       expect(main).toContain('registerSW(')
     })
 
-    it('runtimeCaching is configured for Google Fonts (offline font support)', () => {
+    it('globPatterns includes font files for locally bundled Poppins', () => {
       const config = readFileSync(resolve(__dirname, '../vite.config.ts'), 'utf-8')
-      expect(config).toContain('runtimeCaching')
-      expect(config).toContain('google-fonts-cache')
-      expect(config).toContain('gstatic-fonts-cache')
+      expect(config).toMatch(/globPatterns.*woff/)
     })
   })
 
@@ -61,16 +59,16 @@ describe('PWA Configuration', () => {
       expect(config).toContain("sizes: '512x512'")
     })
 
-    it('manifest theme_color matches dark sable theme', () => {
+    it('manifest theme_color matches Forêt dark theme', () => {
       const config = readFileSync(resolve(__dirname, '../vite.config.ts'), 'utf-8')
-      expect(config).toContain("theme_color: '#1a1a2e'")
-      expect(config).toContain("background_color: '#1a1a2e'")
+      expect(config).toContain("theme_color: '#1E2A22'")
+      expect(config).toContain("background_color: '#1E2A22'")
     })
 
     it('index.html contains theme-color meta tag', () => {
       const html = readFileSync(resolve(__dirname, '../index.html'), 'utf-8')
       expect(html).toContain('name="theme-color"')
-      expect(html).toContain('#1a1a2e')
+      expect(html).toContain('#1E2A22')
     })
 
     it('index.html contains apple-touch-icon link', () => {

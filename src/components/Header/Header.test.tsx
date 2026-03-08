@@ -1,26 +1,27 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { Header } from './Header'
 import { useGameStore } from '../../store/game-store'
 
 describe('Header', () => {
   beforeEach(() => {
-    useGameStore.setState({ showSettings: false })
+    useGameStore.setState({ gamePhase: 'playing', showSettings: false })
   })
 
-  it('renders app title', () => {
+  it('renders app title during gameplay', () => {
     render(<Header />)
-    expect(screen.getByText('ch3ss')).toBeInTheDocument()
+    expect(screen.getByText(/ch/)).toBeInTheDocument()
+    expect(screen.getByText('3')).toBeInTheDocument()
   })
 
-  it('renders settings button', () => {
+  it('does not render gear icon during gameplay (Story 4.8)', () => {
     render(<Header />)
-    expect(screen.getByLabelText('Settings')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Réglages')).not.toBeInTheDocument()
   })
 
-  it('opens Settings drawer when gear icon is clicked', () => {
-    render(<Header />)
-    fireEvent.click(screen.getByLabelText('Settings'))
-    expect(useGameStore.getState().showSettings).toBe(true)
+  it('does not render on home screen', () => {
+    useGameStore.setState({ gamePhase: 'home' })
+    const { container } = render(<Header />)
+    expect(container.firstChild).toBeNull()
   })
 })

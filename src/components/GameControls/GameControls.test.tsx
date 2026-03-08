@@ -8,12 +8,13 @@ describe('GameControls', () => {
     useGameStore.setState({
       gamePhase: 'playing',
       result: undefined,
+      playerColor: 'w',
     })
   })
 
-  it('renders resign button during play', () => {
+  it('renders abandon button during play', () => {
     render(<GameControls />)
-    expect(screen.getByLabelText('Resign game')).toBeInTheDocument()
+    expect(screen.getByLabelText('Abandonner la partie')).toBeInTheDocument()
   })
 
   it('hides controls when game is ended', () => {
@@ -22,12 +23,12 @@ describe('GameControls', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('resign button triggers endGame with resignation', () => {
+  it('shows resign toast with cooldown when abandon is tapped', () => {
     render(<GameControls />)
-    fireEvent.click(screen.getByLabelText('Resign game'))
+    fireEvent.click(screen.getByLabelText('Abandonner la partie'))
 
-    const state = useGameStore.getState()
-    expect(state.gamePhase).toBe('ended')
-    expect(state.result).toEqual({ type: 'resignation', resignedBy: 'w' })
+    // Toast should appear
+    expect(screen.getByText('Partie abandonnée')).toBeInTheDocument()
+    expect(screen.getByLabelText("Annuler l'abandon")).toBeInTheDocument()
   })
 })
