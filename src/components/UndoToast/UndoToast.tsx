@@ -56,7 +56,7 @@ export function UndoToast({ onCooldownExpired }: UndoToastProps) {
 
   return (
     <div
-      className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 toast-enter"
+      className="mt-2 z-30 toast-enter"
       role="status"
       aria-label="Coup joué. Annuler disponible"
     >
@@ -94,7 +94,7 @@ export function UndoToast({ onCooldownExpired }: UndoToastProps) {
           />
         </svg>
 
-        <span className="text-[13px] font-semibold text-[var(--color-text)]">
+        <span className="text-[13px] font-semibold text-(--color-text)">
           Coup joué
         </span>
         <button

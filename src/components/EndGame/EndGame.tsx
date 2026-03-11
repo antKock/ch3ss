@@ -46,7 +46,7 @@ export function EndGame() {
     >
       <div
         ref={dialogRef}
-        className="bg-[var(--color-bg-secondary)] rounded-2xl p-8 text-center max-w-sm mx-4 shadow-2xl"
+        className="bg-(--color-bg-secondary) rounded-2xl p-8 text-center max-w-sm mx-4 shadow-2xl"
         tabIndex={-1}
       >
         <h2
@@ -56,16 +56,16 @@ export function EndGame() {
           {title}
         </h2>
         {subtitle && (
-          <p className="text-[var(--color-text-secondary)] text-lg mb-4">
+          <p className="text-(--color-text-secondary) text-lg mb-4">
             {subtitle}
           </p>
         )}
-        <p className="text-[var(--color-text-secondary)] text-sm mb-6">
+        <p className="text-(--color-text-secondary) text-sm mb-6">
           {moveHistory.length} move{moveHistory.length !== 1 ? 's' : ''} played
         </p>
         <button
           onClick={startNewGame}
-          className="px-6 py-3 rounded-lg bg-[var(--color-accent)] text-white font-semibold hover:opacity-90 transition-opacity text-lg"
+          className="px-6 py-3 rounded-lg bg-(--color-accent) text-white font-semibold hover:opacity-90 transition-opacity text-lg"
           aria-label="Start new game"
         >
           New Game

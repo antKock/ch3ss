@@ -83,7 +83,7 @@ body {
 }
 
 @keyframes arrowDismissOther {
-  to { opacity: 0; transform: scale(0.9); }
+  to { opacity: 0; }
 }
 
 .arrow-dismiss-chosen {

@@ -72,10 +72,19 @@ function selectThreeMoves(classified: ClassifiedMove[]): ClassifiedMove[] {
   // If we have 3, done
   if (selected.length >= 3) return selected.slice(0, 3)
 
-  // Fill remaining from the most populated tier
+  // Fill remaining slots, but force tier diversity by reclassifying
   const remaining = classified.filter((m) => !selected.includes(m))
   while (selected.length < 3 && remaining.length > 0) {
-    selected.push(remaining.shift()!)
+    const move = remaining.shift()!
+    const missingTiers = (['top', 'correct', 'bof'] as const).filter(
+      (tier) => !selected.some((s) => s.classification === tier),
+    )
+    if (missingTiers.length > 0) {
+      // Reclassify to fill a missing tier
+      selected.push({ ...move, classification: missingTiers[0] })
+    } else {
+      selected.push(move)
+    }
   }
 
   // If fewer than 3 legal moves available, return what we have

@@ -61,7 +61,7 @@ export function GameControls() {
         <div className="fixed bottom-4 left-0 right-0 flex justify-center z-10">
           <button
             onClick={handleResign}
-            className="text-[11px] text-[var(--color-text-sec)] opacity-50 hover:opacity-80 transition-opacity bg-transparent border-0"
+            className="text-[11px] text-(--color-text-sec) opacity-50 hover:opacity-80 transition-opacity bg-transparent border-0"
             aria-label="Abandonner la partie"
           >
             Abandonner
@@ -106,7 +106,7 @@ export function GameControls() {
                 opacity="0.6"
               />
             </svg>
-            <span className="text-[13px] font-semibold text-[var(--color-text)]">
+            <span className="text-[13px] font-semibold text-(--color-text)">
               Partie abandonnée
             </span>
             <button

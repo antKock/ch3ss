@@ -55,7 +55,7 @@ function KingIcon({ state, playerColor }: { state: 'standing' | 'fallen' | 'draw
 function DistributionBar({ label, percentage }: { label: string; percentage: number }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="text-[13px] font-bold w-16 text-[var(--color-text)]">{label}</span>
+      <span className="text-[13px] font-bold w-16 text-(--color-text)">{label}</span>
       <div className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-border)' }}>
         <div
           className="h-full rounded-full transition-all duration-500"
@@ -102,7 +102,7 @@ export function RecapScreen() {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center relative recap-enter"
+      className="min-h-screen bg-(--color-bg) flex flex-col items-center relative recap-enter"
       tabIndex={-1}
       role="region"
       aria-label="Résultat de la partie"
@@ -124,7 +124,7 @@ export function RecapScreen() {
         <div className="flex flex-col items-center gap-2">
           <KingIcon state={kingState} playerColor={playerColor} />
           <h2 className="text-[26px] font-extrabold">{title}</h2>
-          <p className="text-[13px] text-[var(--color-text-sec)]">
+          <p className="text-[13px] text-(--color-text-sec)">
             {moveCount} coups{duration ? ` · ${formatDuration(duration)}` : ''}
           </p>
         </div>
@@ -134,7 +134,7 @@ export function RecapScreen() {
           className="w-full rounded-[18px] p-5"
           style={{ backgroundColor: 'var(--color-surface)' }}
         >
-          <p className="text-[12px] font-bold uppercase text-[var(--color-text-sec)] mb-4 tracking-wider">
+          <p className="text-[12px] font-bold uppercase text-(--color-text-sec) mb-4 tracking-wider">
             Tes choix
           </p>
           <div className="flex flex-col gap-3">
@@ -157,13 +157,13 @@ export function RecapScreen() {
         <div className="flex items-center gap-4">
           <button
             onClick={goHome}
-            className="text-[12px] text-[var(--color-text-sec)] hover:opacity-80 transition-opacity"
+            className="text-[12px] text-(--color-text-sec) hover:opacity-80 transition-opacity"
           >
             Accueil
           </button>
           <button
             onClick={() => setShowFinalBoard(true)}
-            className="text-[12px] text-[var(--color-text-sec)] hover:opacity-80 transition-opacity"
+            className="text-[12px] text-(--color-text-sec) hover:opacity-80 transition-opacity"
           >
             Voir le plateau
           </button>

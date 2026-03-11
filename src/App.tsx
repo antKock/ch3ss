@@ -28,7 +28,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]">
+        <div className="min-h-screen flex items-center justify-center bg-(--color-bg) text-(--color-text)">
           <div className="text-center">
             <p className="text-lg mb-4">Something went wrong.</p>
             <button
@@ -51,7 +51,7 @@ function FinalBoardView() {
   const goHome = useGameStore((state) => state.goHome)
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] flex flex-col items-center pt-4">
+    <div className="min-h-screen bg-(--color-bg) flex flex-col items-center pt-4">
       <div className="w-full max-w-md mx-auto px-4">
         <div className="flex items-center gap-3 mb-4">
           <button
@@ -74,7 +74,7 @@ function FinalBoardView() {
           setShowFinalBoard(false)
           goHome()
         }}
-        className="mt-4 text-[13px] text-[var(--color-text-sec)] hover:opacity-80"
+        className="mt-4 text-[13px] text-(--color-text-sec) hover:opacity-80"
       >
         Accueil
       </button>
@@ -114,12 +114,10 @@ function GameApp() {
     }
   }, [isReady, gamePhase, currentMoves, fen, playerColor, generateMoves, handleAIFirstMove])
 
-  // Reset init flag on new game
+  // Reset init flag when game phase changes (new game or return to home)
   useEffect(() => {
-    if (gamePhase === 'playing' && !currentMoves) {
-      hasInitializedRef.current = false
-    }
-  }, [gamePhase, currentMoves])
+    hasInitializedRef.current = false
+  }, [gamePhase])
 
   const handleSelectMove = useCallback(
     (move: ClassifiedMove, arrowColor?: string) => {
@@ -184,9 +182,9 @@ function GameApp() {
 
   // Playing screen
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] font-['Poppins',sans-serif] flex flex-col items-center">
+    <div className="min-h-screen bg-(--color-bg) text-(--color-text) font-['Poppins',sans-serif] flex flex-col items-center">
       <Header />
-      <main className="relative w-full max-w-md mx-auto flex flex-col items-center px-4">
+      <main className="relative w-full max-w-md mx-auto flex flex-col items-center justify-center flex-1 px-4">
         {/* Captured pieces — adversary (top) */}
         <div className="w-[min(calc(100vw-2rem),428px)] mb-1">
           <CapturedPieces position="top" />
@@ -198,22 +196,23 @@ function GameApp() {
           {/* AI thinking indicator */}
           {isAIThinking && (
             <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 rounded-full px-3 py-1">
-              <div className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
-              <span className="text-xs text-[var(--color-text-sec)]">Thinking</span>
+              <div className="w-2 h-2 rounded-full bg-(--color-accent) animate-pulse" />
+              <span className="text-xs text-(--color-text-sec)">Thinking</span>
             </div>
           )}
           {/* Engine loading indicator */}
           {!isReady && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[10px]">
               <div className="flex items-center gap-2 bg-black/70 rounded-full px-4 py-2">
-                <div className="w-3 h-3 rounded-full bg-[var(--color-accent)] animate-pulse" />
+                <div className="w-3 h-3 rounded-full bg-(--color-accent) animate-pulse" />
                 <span className="text-sm">Loading engine...</span>
               </div>
             </div>
           )}
-          {/* Undo toast */}
-          <UndoToast onCooldownExpired={handleUndoCooldownExpired} />
         </div>
+
+        {/* Undo toast — below the board */}
+        <UndoToast onCooldownExpired={handleUndoCooldownExpired} />
 
         {/* Captured pieces — player (bottom) */}
         <div className="w-[min(calc(100vw-2rem),428px)] mt-1">

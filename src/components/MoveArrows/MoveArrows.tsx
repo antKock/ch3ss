@@ -52,7 +52,7 @@ function buildArrowPath(
   const ty = to.y - uy * TIP_OFF
 
   if (isKnight) {
-    // L-shaped path for knight moves
+    // L-shaped path for knight moves — right-angle, not curved
     const fileMove = Math.abs(dx)
     const rankMove = Math.abs(dy)
     const verticalFirst = rankMove > fileMove
@@ -66,25 +66,36 @@ function buildArrowPath(
       midY = from.y
     }
 
-    // Shaft: M start Q mid end (with Bézier curve at corner)
-    const startX = from.x + (midX - from.x === 0 ? 0 : Math.sign(midX - from.x)) * START_OFF
-    const startY = from.y + (midY - from.y === 0 ? 0 : Math.sign(midY - from.y)) * START_OFF
+    // Direction of leg 1 (from → mid)
+    const leg1Dx = midX - from.x
+    const leg1Dy = midY - from.y
+    const leg1Dist = Math.sqrt(leg1Dx * leg1Dx + leg1Dy * leg1Dy)
+    const startX = from.x + (leg1Dist > 0 ? (leg1Dx / leg1Dist) * START_OFF : 0)
+    const startY = from.y + (leg1Dist > 0 ? (leg1Dy / leg1Dist) * START_OFF : 0)
 
-    const shaftPath = `M ${startX} ${startY} Q ${midX} ${midY} ${tx} ${ty}`
+    // Direction of leg 2 (mid → to) for tip offset and arrow head
+    const leg2Dx = to.x - midX
+    const leg2Dy = to.y - midY
+    const leg2Dist = Math.sqrt(leg2Dx * leg2Dx + leg2Dy * leg2Dy)
+    const eUx = leg2Dist > 0 ? leg2Dx / leg2Dist : 0
+    const eUy = leg2Dist > 0 ? leg2Dy / leg2Dist : 0
+
+    // Tip position offset along leg 2 direction
+    const tipX = to.x - eUx * TIP_OFF
+    const tipY = to.y - eUy * TIP_OFF
+
+    // Shaft: two straight segments forming a right angle
+    const shaftEndX = tipX - eUx * HEAD_LEN
+    const shaftEndY = tipY - eUy * HEAD_LEN
+    const shaftPath = `M ${startX} ${startY} L ${midX} ${midY} L ${shaftEndX} ${shaftEndY}`
 
     // Arrow head at the tip
-    const endDx = tx - midX
-    const endDy = ty - midY
-    const endDist = Math.sqrt(endDx * endDx + endDy * endDy)
-    const eUx = endDx / endDist
-    const eUy = endDy / endDist
-
-    const headBase = { x: tx - eUx * HEAD_LEN, y: ty - eUy * HEAD_LEN }
+    const headBase = { x: tipX - eUx * HEAD_LEN, y: tipY - eUy * HEAD_LEN }
     const perpX = -eUy
     const perpY = eUx
 
     const p1 = `${headBase.x + perpX * HEAD_HALF_W},${headBase.y + perpY * HEAD_HALF_W}`
-    const p2 = `${tx},${ty}`
+    const p2 = `${tipX},${tipY}`
     const p3 = `${headBase.x - perpX * HEAD_HALF_W},${headBase.y - perpY * HEAD_HALF_W}`
 
     return { shaftPath, headPoints: `${p1} ${p2} ${p3}` }
@@ -138,10 +149,11 @@ export function MoveArrows({ onSelectMove }: MoveArrowsProps) {
     }
   }, [])
 
-  // Handle invalid tap (tap on board but not on arrow)
+  // Handle invalid tap (tap on board but not on a move square)
   const handleBoardClick = useCallback(
     (e: React.MouseEvent) => {
-      if ((e.target as SVGElement).dataset?.arrowHitbox) return
+      const el = e.target as SVGElement
+      if (el.dataset?.squareHitbox) return
       if (currentMoves && currentMoves.length > 0 && !dismissState) {
         setShakeKey((k) => k + 1)
       }
@@ -218,14 +230,32 @@ export function MoveArrows({ onSelectMove }: MoveArrowsProps) {
               opacity={0.8}
               rx={RND * HEAD_HALF_W}
             />
-            {/* Invisible hitbox for touch */}
-            <path
-              d={shaftPath}
-              stroke="transparent"
-              strokeWidth={44}
-              fill="none"
+            {/* Hitbox for source square */}
+            <rect
+              x={from.x - BOARD_SIZE / 16}
+              y={from.y - BOARD_SIZE / 16}
+              width={BOARD_SIZE / 8}
+              height={BOARD_SIZE / 8}
+              fill="transparent"
               className="cursor-pointer"
-              data-arrow-hitbox="true"
+              data-square-hitbox="true"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleArrowClick(move, i)
+              }}
+            />
+            {/* Hitbox for destination square */}
+            <rect
+              x={to.x - BOARD_SIZE / 16}
+              y={to.y - BOARD_SIZE / 16}
+              width={BOARD_SIZE / 8}
+              height={BOARD_SIZE / 8}
+              fill="transparent"
+              className="cursor-pointer"
+              data-square-hitbox="true"
+              role="button"
+              aria-label={`Move ${pieceName} from ${move.from} to ${move.to}`}
+              tabIndex={0}
               onClick={(e) => {
                 e.stopPropagation()
                 handleArrowClick(move, i)
@@ -235,20 +265,6 @@ export function MoveArrows({ onSelectMove }: MoveArrowsProps) {
                   e.preventDefault()
                   handleArrowClick(move, i)
                 }
-              }}
-              role="button"
-              aria-label={`Move ${pieceName} from ${move.from} to ${move.to}`}
-              tabIndex={0}
-            />
-            {/* Hitbox for head area */}
-            <polygon
-              points={headPoints}
-              fill="transparent"
-              className="cursor-pointer"
-              data-arrow-hitbox="true"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleArrowClick(move, i)
               }}
             />
           </g>
