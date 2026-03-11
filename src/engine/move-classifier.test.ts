@@ -11,14 +11,13 @@ describe('classifyMoves', () => {
       { from: 'a2', to: 'a4', san: 'a4', score: -200 },
     ]
 
-    const classified = classifyMoves(moves)
+    const classified = classifyMoves(moves, 1200)
 
     expect(classified).toHaveLength(3)
-    // First should be top (evalLoss <= 30)
+    // At Elo 1200: T1=43, T2=199
+    // evalLoss: 0, 20, 70, 130, 250 → top(0,20), correct(70,130), bof(250)
     expect(classified[0].classification).toBe('top')
-    // Second should be correct (evalLoss 30-100)
     expect(classified[1].classification).toBe('correct')
-    // Third should be bof (evalLoss > 100)
     expect(classified[2].classification).toBe('bof')
   })
 
@@ -29,7 +28,7 @@ describe('classifyMoves', () => {
       { from: 'a2', to: 'a3', san: 'a3', score: -10 },
     ]
 
-    const classified = classifyMoves(moves)
+    const classified = classifyMoves(moves, 1200)
     expect(classified).toHaveLength(3)
   })
 
@@ -41,7 +40,7 @@ describe('classifyMoves', () => {
       { from: 'c2', to: 'c4', san: 'c4', score: 40 },
     ]
 
-    const classified = classifyMoves(moves)
+    const classified = classifyMoves(moves, 1200)
     expect(classified).toHaveLength(3)
   })
 
@@ -51,12 +50,12 @@ describe('classifyMoves', () => {
       { from: 'e1', to: 'g1', san: 'Kg1', score: -600 },
     ]
 
-    const classified = classifyMoves(moves)
+    const classified = classifyMoves(moves, 1200)
     expect(classified).toHaveLength(2)
   })
 
   it('handles empty moves array', () => {
-    const classified = classifyMoves([])
+    const classified = classifyMoves([], 1200)
     expect(classified).toHaveLength(0)
   })
 
@@ -66,7 +65,7 @@ describe('classifyMoves', () => {
       { from: 'd2', to: 'd4', san: 'd4', score: 50 },
     ]
 
-    const classified = classifyMoves(moves)
+    const classified = classifyMoves(moves, 1200)
     expect(classified[0].evalLoss).toBe(0) // best move
     expect(classified[1].evalLoss).toBe(50) // 100 - 50
   })
@@ -78,7 +77,7 @@ describe('classifyMoves', () => {
       { from: 'c2', to: 'c3', san: 'c3', score: -100 },
     ]
 
-    const classified = classifyMoves(moves)
+    const classified = classifyMoves(moves, 1200)
     const promoMove = classified.find((m) => m.promotion === 'q')
     expect(promoMove).toBeDefined()
     expect(promoMove!.from).toBe('a7')

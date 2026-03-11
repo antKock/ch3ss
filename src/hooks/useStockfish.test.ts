@@ -23,7 +23,7 @@ describe('useStockfish', () => {
 
     await expect(initEngine()).resolves.toBeUndefined()
 
-    const moves = await generatePlayerMoves('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+    const moves = await generatePlayerMoves('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', 1200)
     expect(moves).toHaveLength(3)
 
     const aiMove = await getAIMove('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1', 1000)

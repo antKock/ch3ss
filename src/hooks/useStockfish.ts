@@ -57,7 +57,7 @@ export function useStockfish() {
       setIsLoading(true)
       setError(null)
       try {
-        const moves = await generatePlayerMoves(targetFen ?? fen)
+        const moves = await generatePlayerMoves(targetFen ?? fen, settings.opponentElo)
         presentMoves(moves)
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err))
@@ -66,7 +66,7 @@ export function useStockfish() {
         setIsLoading(false)
       }
     },
-    [fen, presentMoves],
+    [fen, settings.opponentElo, presentMoves],
   )
 
   // Full turn cycle: after player moves, AI responds, then generate new player moves
@@ -134,7 +134,7 @@ export function useStockfish() {
       }
 
       // Generate new player moves
-      const moves = await generatePlayerMoves(postAiFen)
+      const moves = await generatePlayerMoves(postAiFen, settings.opponentElo)
       presentMoves(moves)
     } catch (err) {
       setIsAIThinking(false)
@@ -154,7 +154,7 @@ export function useStockfish() {
       setIsAIThinking(false)
 
       const postAiFen = useGameStore.getState().fen
-      const moves = await generatePlayerMoves(postAiFen)
+      const moves = await generatePlayerMoves(postAiFen, settings.opponentElo)
       presentMoves(moves)
     } catch (err) {
       setIsAIThinking(false)

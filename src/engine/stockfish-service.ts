@@ -5,7 +5,7 @@ import { createStockfishWorker } from './stockfish.worker'
 
 const TIMEOUT_MS = 5000
 const DEFAULT_DEPTH = 12
-const MULTI_PV = 5
+const MULTI_PV = 8
 
 function getDepth(): number {
   const env = import.meta.env.VITE_STOCKFISH_DEPTH
@@ -134,6 +134,7 @@ function parseUCIMove(uciMove: string): { from: string; to: string; promotion?: 
 
 export async function generatePlayerMoves(
   fen: string,
+  opponentElo: number,
   depth?: number,
 ): Promise<ClassifiedMove[]> {
   await initEngine()
@@ -193,7 +194,7 @@ export async function generatePlayerMoves(
   // Reset multi-PV to 1
   sendCommand('setoption name MultiPV value 1')
 
-  return classifyMoves(rawMoves)
+  return classifyMoves(rawMoves, opponentElo)
 }
 
 export async function getAIMove(

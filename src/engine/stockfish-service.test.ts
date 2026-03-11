@@ -59,6 +59,7 @@ describe('stockfish-service', () => {
   it('generates player moves returning classified moves', async () => {
     const moves = await generatePlayerMoves(
       'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      1200,
       12,
     )
 
