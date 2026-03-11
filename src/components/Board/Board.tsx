@@ -117,12 +117,22 @@ export function Board() {
     const tintColors = squareTints[squareName]
     if (!tintColors || tintColors.length === 0) return baseBg
 
-    let mixed = baseBg
-    for (const c of tintColors) {
-      const amount = c === OPPONENT_TINT ? 0.35 : 0.45
-      mixed = mixColors(mixed, c, amount)
+    // Single color: mix directly into background for clean look
+    if (tintColors.length === 1) {
+      const amount = tintColors[0] === OPPONENT_TINT ? 0.35 : 0.45
+      return mixColors(baseBg, tintColors[0], amount)
     }
-    return mixed
+
+    // Multiple colors: mix the first one, others rendered as overlays
+    const amount = tintColors[0] === OPPONENT_TINT ? 0.35 : 0.45
+    return mixColors(baseBg, tintColors[0], amount)
+  }
+
+  // Get overlay colors for squares with 2+ tints (rendered as diagonal split)
+  const getSquareOverlays = (squareName: string): string[] => {
+    const tintColors = squareTints[squareName]
+    if (!tintColors || tintColors.length <= 1) return []
+    return tintColors.slice(1)
   }
 
   return (
@@ -165,6 +175,7 @@ export function Board() {
               (animatingMove.capturedSquare && animatingMove.capturedSquare === squareName)
             )
             const bgColor = getSquareBg(squareName, isLight)
+            const overlays = getSquareOverlays(squareName)
 
             return (
               <div
@@ -181,6 +192,18 @@ export function Board() {
                 tabIndex={0}
                 data-square={squareName}
               >
+                {/* Diagonal overlay for shared squares (2+ arrow colors) */}
+                {overlays.map((color, oi) => (
+                  <div
+                    key={oi}
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: `linear-gradient(135deg, transparent 50%, ${color} 50%)`,
+                      opacity: 0.45,
+                      transition: 'opacity 200ms ease-out',
+                    }}
+                  />
+                ))}
                 {piece && (
                   <img
                     src={piece}

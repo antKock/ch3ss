@@ -52,13 +52,12 @@ export function UndoToast({ onCooldownExpired }: UndoToastProps) {
     return () => document.removeEventListener('keydown', handler)
   }, [undoState, handleCancel])
 
-  if (!undoState) return null
-
   return (
     <div
-      className="mt-2 z-30 toast-enter"
+      className={`mt-2 z-30 ${undoState ? 'toast-enter' : 'invisible'}`}
       role="status"
       aria-label="Coup joué. Annuler disponible"
+      aria-hidden={!undoState}
     >
       <div
         className="relative flex items-center gap-3 px-4 py-3.5 rounded-[18px] shadow-lg overflow-hidden"
@@ -89,7 +88,7 @@ export function UndoToast({ onCooldownExpired }: UndoToastProps) {
             strokeWidth="2"
             strokeDasharray={RING_PERIMETER}
             strokeDashoffset="0"
-            className="cooldown-ring"
+            className={undoState ? 'cooldown-ring' : ''}
             opacity="0.6"
           />
         </svg>
@@ -99,6 +98,7 @@ export function UndoToast({ onCooldownExpired }: UndoToastProps) {
         </span>
         <button
           onClick={handleCancel}
+          tabIndex={undoState ? 0 : -1}
           className="text-[14px] font-semibold px-3 py-1 rounded-[14px] transition-opacity hover:opacity-80"
           style={{
             color: 'var(--color-accent)',

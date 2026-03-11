@@ -28,9 +28,12 @@ describe('UndoToast', () => {
     vi.useRealTimers()
   })
 
-  it('renders nothing when undoState is null', () => {
+  it('renders invisible placeholder when undoState is null', () => {
     const { container } = render(<UndoToast onCooldownExpired={onCooldownExpired} />)
-    expect(container.firstChild).toBeNull()
+    const el = container.firstChild as HTMLElement
+    expect(el).not.toBeNull()
+    expect(el.classList.contains('invisible')).toBe(true)
+    expect(el.getAttribute('aria-hidden')).toBe('true')
   })
 
   it('renders toast when undoState is present', () => {

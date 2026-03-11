@@ -48,7 +48,13 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
 
 function FinalBoardView() {
   const setShowFinalBoard = useGameStore((state) => state.setShowFinalBoard)
+  const setBoardFadeOut = useGameStore((state) => state.setBoardFadeOut)
   const goHome = useGameStore((state) => state.goHome)
+
+  // Ensure board is visible when viewing final position
+  useEffect(() => {
+    setBoardFadeOut(false)
+  }, [setBoardFadeOut])
 
   return (
     <div className="min-h-screen bg-(--color-bg) flex flex-col items-center pt-4">
@@ -83,7 +89,7 @@ function FinalBoardView() {
 }
 
 function GameApp() {
-  const { isReady, isAIThinking, generateMoves, handlePlayerMoveComplete, handleAIFirstMove } = useStockfish()
+  const { isReady, generateMoves, handlePlayerMoveComplete, handleAIFirstMove } = useStockfish()
   const gamePhase = useGameStore((state) => state.gamePhase)
   const fen = useGameStore((state) => state.fen)
   const currentMoves = useGameStore((state) => state.currentMoves)
@@ -193,13 +199,7 @@ function GameApp() {
         <div className="relative">
           <Board />
           <MoveArrows onSelectMove={handleSelectMove} />
-          {/* AI thinking indicator */}
-          {isAIThinking && (
-            <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 rounded-full px-3 py-1">
-              <div className="w-2 h-2 rounded-full bg-(--color-accent) animate-pulse" />
-              <span className="text-xs text-(--color-text-sec)">Thinking</span>
-            </div>
-          )}
+          {/* AI thinking indicator removed — response delay is always acceptable */}
           {/* Engine loading indicator */}
           {!isReady && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[10px]">
@@ -211,13 +211,13 @@ function GameApp() {
           )}
         </div>
 
-        {/* Undo toast — below the board */}
-        <UndoToast onCooldownExpired={handleUndoCooldownExpired} />
-
         {/* Captured pieces — player (bottom) */}
         <div className="w-[min(calc(100vw-2rem),428px)] mt-1">
           <CapturedPieces position="bottom" />
         </div>
+
+        {/* Undo toast — below captured pieces */}
+        <UndoToast onCooldownExpired={handleUndoCooldownExpired} />
 
         <GameControls />
       </main>

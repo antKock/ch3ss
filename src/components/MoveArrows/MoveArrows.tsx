@@ -182,7 +182,7 @@ export function MoveArrows({ onSelectMove }: MoveArrowsProps) {
 
   return (
     <svg
-      className={`absolute inset-0 w-full h-full pointer-events-none ${
+      className={`absolute inset-0 w-full h-full pointer-events-none z-10 ${
         shakeKey > 0 && !dismissState ? 'arrow-shake' : ''
       }`}
       key={dismissState ? `dismiss-${shakeKey}` : shakeKey}

@@ -53,10 +53,12 @@ interface CapturedPiecesRowProps {
 }
 
 function CapturedPiecesRow({ pieces, color, isDarkMode }: CapturedPiecesRowProps) {
-  if (pieces.length === 0) return null
-
   return (
-    <div className="flex items-center gap-0.5 h-6 min-h-[22px]" aria-label={`Captured ${color === 'w' ? 'white' : 'black'} pieces`}>
+    <div
+      className={`flex items-center gap-0.5 h-6 min-h-[22px] ${pieces.length === 0 ? 'invisible' : ''}`}
+      aria-label={`Captured ${color === 'w' ? 'white' : 'black'} pieces`}
+      aria-hidden={pieces.length === 0}
+    >
       {pieces.map((type, i) => (
         <img
           key={`${type}-${i}`}

@@ -8,10 +8,10 @@ describe('Header', () => {
     useGameStore.setState({ gamePhase: 'playing', showSettings: false })
   })
 
-  it('renders app title during gameplay', () => {
+  it('renders app title and subtitle during gameplay', () => {
     render(<Header />)
-    expect(screen.getByText(/ch/)).toBeInTheDocument()
-    expect(screen.getByText('3')).toBeInTheDocument()
+    expect(screen.getByRole('heading')).toBeInTheDocument()
+    expect(screen.getByText('3 options, ton choix')).toBeInTheDocument()
   })
 
   it('does not render gear icon during gameplay (Story 4.8)', () => {
